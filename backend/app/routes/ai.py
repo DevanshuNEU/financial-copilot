@@ -1,14 +1,14 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from app.models import Expense, AIInsight, ExpenseCategory
-import openai
+from openai import OpenAI
 import os
 from datetime import datetime, timedelta
 
 bp = Blueprint('ai', __name__, url_prefix='/api/ai')
 
 # Configure OpenAI
-openai.api_key = os.getenv('OPENAI_API_KEY')
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 @bp.route('/query', methods=['POST'])
 def natural_language_query():
@@ -36,7 +36,7 @@ def natural_language_query():
         """
         
         # Call OpenAI API
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful financial AI assistant."},
@@ -87,7 +87,7 @@ def categorize_expense():
         Format: category_name,confidence_score
         """
         
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expense categorization assistant."},
@@ -154,7 +154,7 @@ def get_ai_insights():
         Provide actionable insights about spending patterns, potential savings, and recommendations.
         """
         
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a financial advisor providing spending insights."},
@@ -179,71 +179,3 @@ def get_ai_insights():
         
     except Exception as e:
         return jsonify({'error': f'Insights generation failed: {str(e)}'}), 500
-
-@bp.route('/predict', methods=['POST'])
-def predict_expense_trends():
-    """Predict future expense trends"""
-    try:
-        data = request.get_json()
-        category = data.get('category', 'all')
-        
-        # Get historical data
-        ninety_days_ago = datetime.utcnow() - timedelta(days=90)
-        
-        if category == 'all':
-            expenses = Expense.query.filter(
-                Expense.created_at >= ninety_days_ago
-            ).all()
-        else:
-            expenses = Expense.query.filter(
-                Expense.created_at >= ninety_days_ago,
-                Expense.category == ExpenseCategory(category)
-            ).all()
-        
-        if len(expenses) < 5:
-            return jsonify({'prediction': 'Insufficient data for prediction'})
-        
-        # Simple trend analysis
-        daily_totals = {}
-        for exp in expenses:
-            date_key = exp.created_at.date()
-            daily_totals[date_key] = daily_totals.get(date_key, 0) + float(exp.amount)
-        
-        # Calculate average and trend
-        amounts = list(daily_totals.values())
-        avg_daily = sum(amounts) / len(amounts)
-        
-        # AI-powered prediction
-        prompt = f"""
-        Based on this expense data, predict next month's spending:
-        
-        Category: {category}
-        Average daily spending: ${avg_daily:.2f}
-        Recent expenses: {len(expenses)} in last 90 days
-        Daily amounts: {amounts[-7:]}  # Last 7 days
-        
-        Provide a prediction with confidence level and reasoning.
-        """
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a financial forecasting assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=200,
-            temperature=0.5
-        )
-        
-        prediction = response.choices[0].message.content
-        
-        return jsonify({
-            'category': category,
-            'prediction': prediction,
-            'avg_daily': avg_daily,
-            'data_points': len(expenses),
-            'generated_at': datetime.utcnow().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Prediction failed: {str(e)}'}), 500

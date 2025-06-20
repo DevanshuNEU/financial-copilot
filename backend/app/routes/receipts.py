@@ -5,11 +5,15 @@ from werkzeug.utils import secure_filename
 import os
 import pytesseract
 from PIL import Image
-import openai
+from openai import OpenAI
 import tempfile
 import uuid
+from datetime import datetime
 
 bp = Blueprint('receipts', __name__, url_prefix='/api/receipts')
+
+# Configure OpenAI
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Configure upload settings
 UPLOAD_FOLDER = tempfile.gettempdir()
@@ -117,7 +121,7 @@ def extract_receipt_data(ocr_text):
         Return only valid JSON, no extra text.
         """
         
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a receipt data extraction assistant. Return only valid JSON."},
@@ -165,95 +169,3 @@ def extract_receipt_fallback(ocr_text):
         'confidence': 0.3,
         'date': ''
     }
-
-@bp.route('/validate', methods=['POST'])
-def validate_receipt_data():
-    """Validate and correct receipt data"""
-    try:
-        data = request.get_json()
-        
-        # Use AI to validate the extracted data
-        prompt = f"""
-        Validate this receipt data for accuracy and completeness:
-        
-        Amount: ${data.get('amount', 0)}
-        Vendor: {data.get('vendor', '')}
-        Category: {data.get('category', '')}
-        Description: {data.get('description', '')}
-        
-        Check for:
-        1. Reasonable amount (not too high/low)
-        2. Valid vendor name
-        3. Appropriate category
-        4. Policy compliance
-        
-        Return validation results with suggestions.
-        """
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a receipt validation assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=200,
-            temperature=0.5
-        )
-        
-        validation_result = response.choices[0].message.content
-        
-        return jsonify({
-            'original_data': data,
-            'validation': validation_result,
-            'validated_at': datetime.utcnow().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Validation failed: {str(e)}'}), 500
-
-@bp.route('/batch', methods=['POST'])
-def batch_process_receipts():
-    """Process multiple receipts at once"""
-    try:
-        files = request.files.getlist('receipts')
-        
-        if not files:
-            return jsonify({'error': 'No files provided'}), 400
-        
-        results = []
-        
-        for file in files:
-            if file and allowed_file(file.filename):
-                try:
-                    # Process each file
-                    filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
-                    filepath = os.path.join(UPLOAD_FOLDER, filename)
-                    file.save(filepath)
-                    
-                    # OCR and AI processing
-                    ocr_result = process_receipt_ocr(filepath)
-                    structured_data = extract_receipt_data(ocr_result)
-                    
-                    results.append({
-                        'filename': file.filename,
-                        'success': True,
-                        'data': structured_data
-                    })
-                    
-                    # Clean up
-                    os.remove(filepath)
-                    
-                except Exception as e:
-                    results.append({
-                        'filename': file.filename,
-                        'success': False,
-                        'error': str(e)
-                    })
-        
-        return jsonify({
-            'processed': len(results),
-            'results': results
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Batch processing failed: {str(e)}'}), 500
