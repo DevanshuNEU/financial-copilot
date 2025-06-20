@@ -1,261 +1,461 @@
-# Financial Copilot 🤖💰
+<div align="center">
+  <img src="https://raw.githubusercontent.com/DevanshuNEU/financial-copilot/main/assets/logo.png" alt="Financial Copilot Logo" width="120" height="120">
+  
+  # Financial Copilot 🤖💰
+  
+  ### AI-powered financial intelligence platform
+  
+  Transform how businesses manage expenses, process receipts, and make data-driven financial decisions with cutting-edge AI technology.
+  
+  [![Made with React](https://img.shields.io/badge/Made%20with-React-61DAFB?style=flat-square&logo=react)](https://reactjs.org/)
+  [![Built with Flask](https://img.shields.io/badge/Built%20with-Flask-000000?style=flat-square&logo=flask)](https://flask.palletsprojects.com/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-> AI-powered financial intelligence platform that transforms how businesses manage expenses, process receipts, and make data-driven financial decisions.
+  [Demo](#demo) • [Features](#features) • [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing)
+</div>
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FDevanshuNEU%2Ffinancial-copilot)
+---
+
+## 🎯 Overview
+
+Financial Copilot is a modern, AI-powered financial intelligence platform designed for businesses who want to streamline their expense management, automate receipt processing, and gain actionable insights from their financial data. Built with enterprise-grade architecture and a focus on developer experience.
+
+**Why Financial Copilot?**
+- **🧠 AI-First**: Natural language queries for complex financial analysis
+- **📸 Smart Processing**: OCR + AI categorization with confidence scoring
+- **📊 Real-time Intelligence**: Live dashboards with predictive analytics  
+- **🔮 Future-Ready**: Built for scale with microservices architecture
+- **💬 Conversational**: Chat with your financial data like never before
+
+---
 
 ## ✨ Features
 
-- 🧠 **AI-Powered Analytics** - Natural language queries for financial data
-- 📸 **Smart Receipt Processing** - OCR + AI categorization with confidence scores  
-- 📊 **Real-time Dashboards** - Beautiful, responsive financial insights
-- 🔮 **Predictive Intelligence** - Budget forecasting and anomaly detection
-- 💬 **Conversational Interface** - Chat with your financial data
-- 📱 **Mobile-First Design** - Works seamlessly across all devices
-- 🔄 **Real-time Updates** - WebSocket-powered live data synchronization
-- 🏗️ **Enterprise Architecture** - Scalable microservices design
+### Core Financial Management
+- **💳 Expense Tracking** - Comprehensive expense management with automatic categorization
+- **📊 Real-time Dashboard** - Beautiful, responsive financial insights and KPIs
+- **📈 Analytics & Reporting** - Advanced financial reporting with custom date ranges
+- **🔍 Smart Search** - Find expenses instantly with intelligent search algorithms
 
-## 🚀 Tech Stack
+### AI-Powered Intelligence  
+- **🤖 Natural Language Queries** - Ask questions like "Show me software expenses over $100 this quarter"
+- **📸 Receipt Processing** - OCR + AI categorization with confidence scores
+- **🔮 Predictive Analytics** - Budget forecasting and anomaly detection
+- **💡 Smart Insights** - AI-generated financial recommendations
 
-### Frontend
-- **React 18+** with TypeScript
-- **shadcn/ui** + Tailwind CSS for beautiful, accessible components
-- **Recharts** for data visualization  
-- **WebSocket** for real-time updates
+### Developer Experience
+- **🚀 Modern Stack** - React 18, TypeScript, Flask, PostgreSQL
+- **🎨 Beautiful UI** - shadcn/ui components with Tailwind CSS
+- **📱 Mobile-First** - Responsive design that works on all devices
+- **🔄 Real-time Updates** - WebSocket-powered live data synchronization
+- **🏗️ Scalable Architecture** - Enterprise-ready microservices design
 
-### Backend
-- **Flask** (Python) RESTful API
-- **PostgreSQL** for robust data storage
-- **Redis** for caching and job queues
-- **OpenAI API** for natural language processing
+---
 
-### Infrastructure
-- **Railway** / **Render** for backend deployment
-- **Vercel** for frontend deployment
-- **Supabase** for managed PostgreSQL
-- **Cloudinary** for asset management
-
-## 🏃‍♂️ Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- Python 3.9+
-- PostgreSQL 14+
-- Redis 6+
 
-### Frontend Setup
-```bash
-# Clone the repository
-git clone https://github.com/DevanshuNEU/financial-copilot.git
-cd financial-copilot
+Before you begin, ensure you have the following installed:
+- **Node.js** (v18 or higher) - [Download here](https://nodejs.org/)
+- **Python** (3.9 or higher) - [Download here](https://python.org/)
+- **Git** - [Download here](https://git-scm.com/)
 
-# Install frontend dependencies
-cd frontend
-npm install
+### Installation
 
-# Set up environment variables
-cp .env.example .env.local
-# Add your API URLs and keys
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/DevanshuNEU/financial-copilot.git
+   cd financial-copilot
+   ```
 
-# Start development server
-npm run dev
+2. **Set up the backend**
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. **Set up the frontend**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+4. **Start the development servers**
+   ```bash
+   # Terminal 1 - Backend (Flask)
+   cd backend && source venv/bin/activate && python simple_app.py
+   
+   # Terminal 2 - Frontend (React)
+   cd frontend && npm start
+   ```
+
+5. **Open your browser**
+   - Frontend: [http://localhost:3000](http://localhost:3000)
+   - Backend API: [http://localhost:5002](http://localhost:5002)
+
+**🎉 That's it!** You should see the Financial Copilot dashboard with sample expense data.
+
+---## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Financial Copilot                        │
+├─────────────────────────────────────────────────────────────┤
+│  Frontend (React + TypeScript)                             │
+│  ├── Dashboard Components                                   │
+│  ├── API Service Layer                                      │
+│  ├── shadcn/ui + Tailwind CSS                              │
+│  └── Real-time WebSocket Client                            │
+├─────────────────────────────────────────────────────────────┤
+│  Backend (Flask Python)                                    │
+│  ├── RESTful API Endpoints                                 │
+│  ├── SQLAlchemy ORM                                        │
+│  ├── AI Service Integration                                │
+│  └── WebSocket Server                                      │
+├─────────────────────────────────────────────────────────────┤
+│  Data Layer                                                │
+│  ├── PostgreSQL (Production)                               │
+│  ├── SQLite (Development)                                  │
+│  ├── Redis (Caching & Jobs)                               │
+│  └── OpenAI API                                           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Backend Setup
-```bash
-# Navigate to backend directory
-cd backend
+### Tech Stack
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+**Frontend**
+- ⚡️ **React 18** - Modern React with concurrent features
+- 🔷 **TypeScript** - Type-safe development
+- 🎨 **Tailwind CSS** - Utility-first CSS framework
+- 🧩 **shadcn/ui** - High-quality, accessible UI components
+- 📊 **Recharts** - Responsive chart library
+- 🔄 **WebSocket** - Real-time data updates
 
-# Install dependencies
-pip install -r requirements.txt
+**Backend**
+- 🐍 **Flask** - Lightweight, flexible Python web framework
+- 🗄️ **SQLAlchemy** - Python SQL toolkit and ORM
+- 🚀 **Flask-CORS** - Cross-origin resource sharing
+- 🔌 **Flask-SocketIO** - WebSocket support
+- 🧠 **OpenAI API** - Natural language processing
 
-# Set up environment variables
-cp .env.example .env
-# Add your database URL, OpenAI API key, etc.
+**Database & Infrastructure**
+- 🐘 **PostgreSQL** - Production database
+- 🗃️ **SQLite** - Development database
+- ⚡ **Redis** - Caching and job queues
+- 🐳 **Docker** - Containerization
+- ☁️ **Railway/Vercel** - Deployment platforms
 
-# Run database migrations
-flask db upgrade
+---
 
-# Start development server
-flask run
-```
-
-### Docker Setup (Alternative)
-```bash
-# Run the entire stack with Docker Compose
-docker-compose up -d
-
-# The application will be available at:
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:5000
-```
-
-## 🏗️ Architecture
-
-```mermaid
-graph TB
-    A[React Frontend] --> B[Flask API]
-    B --> C[PostgreSQL]
-    B --> D[Redis Cache]
-    B --> E[OpenAI API]
-    B --> F[OCR Service]
-    G[WebSocket Server] --> A
-    B --> G
-    H[Background Workers] --> D
-    H --> C
-```
-
-### Key Components
-
-- **Dashboard Service** - Real-time financial overview and KPIs
-- **Expense Service** - CRUD operations for expense management
-- **Receipt Service** - OCR processing and smart categorization
-- **AI Service** - Natural language query processing
-- **Analytics Service** - Predictive modeling and insights
-- **Notification Service** - Real-time alerts and updates
-
-## 📊 API Documentation
+## 📊 API Reference
 
 ### Core Endpoints
 
-```typescript
-// Expense Management
-GET    /api/expenses              # List all expenses
-POST   /api/expenses              # Create new expense
-GET    /api/expenses/:id          # Get specific expense
-PUT    /api/expenses/:id          # Update expense
-DELETE /api/expenses/:id          # Delete expense
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Health check |
+| `GET` | `/api/expenses` | List all expenses |
+| `POST` | `/api/expenses` | Create new expense |
+| `GET` | `/api/expenses/:id` | Get specific expense |
+| `PUT` | `/api/expenses/:id` | Update expense |
+| `DELETE` | `/api/expenses/:id` | Delete expense |
+| `GET` | `/api/dashboard/overview` | Dashboard analytics |
 
-// Receipt Processing
-POST   /api/receipts/upload       # Upload and process receipt
-GET    /api/receipts/:id/status   # Check processing status
+### Example Usage
 
-// AI Analytics
-POST   /api/ai/query              # Natural language query
-GET    /api/ai/insights           # Get AI-generated insights
-POST   /api/ai/categorize         # Categorize expense
-
-// Real-time Features
-WS     /ws/expenses               # Live expense updates
-WS     /ws/notifications          # Real-time alerts
+**Get all expenses**
+```javascript
+const response = await fetch('/api/expenses');
+const data = await response.json();
+console.log(data.expenses); // Array of expense objects
 ```
 
-### Example API Usage
-
+**Create new expense**
 ```javascript
-// Natural language query
-const response = await fetch('/api/ai/query', {
+const expense = {
+  amount: 120.50,
+  category: 'software',
+  description: 'Monthly subscription',
+  vendor: 'Adobe'
+};
+
+const response = await fetch('/api/expenses', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: "Show me software expenses over $100 this quarter"
-  })
-});
-
-// Receipt processing
-const formData = new FormData();
-formData.append('receipt', file);
-const result = await fetch('/api/receipts/upload', {
-  method: 'POST',
-  body: formData
+  body: JSON.stringify(expense)
 });
 ```
 
-## 🎨 UI Components
+---## 🧪 Development
 
-Built with [shadcn/ui](https://ui.shadcn.com/) for consistency and accessibility:
+### Project Structure
 
-- `<ExpenseCard />` - Individual expense display
-- `<ReceiptUpload />` - Drag-and-drop receipt processing
-- `<AIChat />` - Conversational query interface
-- `<InsightsDashboard />` - Analytics overview
-- `<ExpenseChart />` - Interactive data visualization
-
-## 🧪 Testing
-
-### Frontend Tests
-```bash
-cd frontend
-npm run test              # Run unit tests
-npm run test:e2e          # Run Cypress E2E tests
-npm run test:coverage     # Generate coverage report
+```
+financial-copilot/
+├── frontend/                 # React TypeScript application
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   │   ├── ui/         # shadcn/ui components
+│   │   │   └── dashboard/  # Dashboard components
+│   │   ├── services/       # API service layer
+│   │   ├── types/          # TypeScript definitions
+│   │   └── lib/           # Utility functions
+│   ├── public/             # Static assets
+│   └── package.json        # Dependencies & scripts
+├── backend/                 # Flask Python API
+│   ├── simple_app.py       # Main application
+│   ├── requirements.txt    # Python dependencies
+│   └── venv/              # Virtual environment
+├── docker-compose.yml      # Multi-container setup
+└── README.md              # You are here
 ```
 
-### Backend Tests
+### Environment Variables
+
+Create `.env` files in both frontend and backend directories:
+
+**Backend `.env`**
+```env
+DATABASE_URL=sqlite:///financial_copilot.db
+SECRET_KEY=your-secret-key-here
+OPENAI_API_KEY=sk-your-openai-api-key
+REDIS_URL=redis://localhost:6379
+```
+
+**Frontend `.env.local`**
+```env
+REACT_APP_API_URL=http://localhost:5002
+REACT_APP_WS_URL=ws://localhost:5002
+```
+
+### Available Scripts
+
+**Backend**
 ```bash
 cd backend
-pytest                    # Run all tests
-pytest --cov             # Run with coverage
-pytest tests/unit         # Unit tests only
-pytest tests/integration  # Integration tests only
+source venv/bin/activate
+python simple_app.py          # Start development server
+python -m pytest             # Run tests
+python -m flask db upgrade   # Run database migrations
 ```
+
+**Frontend**
+```bash
+cd frontend
+npm start                     # Start development server
+npm test                      # Run test suite
+npm run build                # Build for production
+npm run lint                 # Run ESLint
+```
+
+### Code Quality
+
+We maintain high code quality standards:
+
+- **ESLint + Prettier** for frontend code formatting
+- **Black + isort + Flake8** for Python code formatting  
+- **Conventional Commits** for commit message standards
+- **TypeScript** for type safety
+- **Comprehensive testing** with Jest and Pytest
+
+---
 
 ## 🚀 Deployment
 
-### Railway (Backend)
+### Docker Deployment
+
+The easiest way to run Financial Copilot in production:
+
+```bash
+# Clone and navigate to project
+git clone https://github.com/DevanshuNEU/financial-copilot.git
+cd financial-copilot
+
+# Start with Docker Compose
+docker-compose up -d
+
+# Access the application
+# Frontend: http://localhost:3000
+# Backend: http://localhost:5002
+```
+
+### Manual Deployment
+
+**Railway (Backend)**
 1. Connect your GitHub repository to Railway
 2. Set environment variables in Railway dashboard
 3. Deploy automatically on push to main
 
-### Vercel (Frontend)
+**Vercel (Frontend)**
 1. Connect repository to Vercel
 2. Set build command: `cd frontend && npm run build`
 3. Set environment variables
 4. Deploy automatically
 
-### Environment Variables
+### Environment Setup
 
-#### Frontend (.env.local)
-```bash
+**Production Environment Variables**
+```env
+# Backend
+DATABASE_URL=postgresql://user:pass@host:port/db
+REDIS_URL=redis://host:port
+OPENAI_API_KEY=sk-...
+SECRET_KEY=your-production-secret-key
+
+# Frontend
 NEXT_PUBLIC_API_URL=https://your-api.railway.app
 NEXT_PUBLIC_WS_URL=wss://your-api.railway.app
 ```
 
-#### Backend (.env)
-```bash
-DATABASE_URL=postgresql://user:pass@host:port/db
-REDIS_URL=redis://host:port
-OPENAI_API_KEY=sk-...
-SECRET_KEY=your-secret-key
-CLOUDINARY_URL=cloudinary://...
-```
+---## 🤝 Contributing
 
-## 🤝 Contributing
+We love our contributors! Here's how you can contribute to Financial Copilot:
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+### Getting Started
 
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and add tests
-4. Commit with conventional commits: `git commit -m "feat: add amazing feature"`
-5. Push to your fork and submit a Pull Request
+1. **Fork the repository** and clone your fork
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Follow our development setup** from the [Development](#development) section
+4. **Make your changes** and ensure they follow our coding standards
+5. **Test your changes** thoroughly
+6. **Commit your changes**: `git commit -m "feat: add amazing feature"`
+7. **Push to your fork**: `git push origin feature/amazing-feature`
+8. **Submit a Pull Request**
+
+### Development Guidelines
+
+- **Follow conventional commits**: `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`
+- **Write tests** for new functionality
+- **Update documentation** as needed
+- **Ensure code quality** with our linting rules
+- **Keep PRs focused** - one feature/fix per PR
 
 ### Code Style
-- **Frontend**: ESLint + Prettier
-- **Backend**: Black + isort + Flake8
-- **Commits**: Conventional Commits
+
+**Frontend (React/TypeScript)**
+- Use functional components with hooks
+- Follow React best practices
+- Use TypeScript for type safety
+- Style with Tailwind CSS utility classes
+- Use shadcn/ui components when possible
+
+**Backend (Python/Flask)**
+- Follow PEP 8 style guidelines
+- Use type hints where appropriate
+- Write comprehensive docstrings
+- Handle errors gracefully
+- Use SQLAlchemy for database operations
+
+### Reporting Issues
+
+Found a bug? Have a feature request? Please use our issue templates:
+- 🐛 [Bug Report](https://github.com/DevanshuNEU/financial-copilot/issues/new?template=bug_report.md)
+- 💡 [Feature Request](https://github.com/DevanshuNEU/financial-copilot/issues/new?template=feature_request.md)
+
+---
+
+## 📚 Documentation
+
+### Additional Resources
+
+- **[API Documentation](docs/api.md)** - Complete API reference
+- **[Component Guide](docs/components.md)** - Frontend component documentation  
+- **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
+- **[Contributing Guide](CONTRIBUTING.md)** - Detailed contribution guidelines
+- **[Changelog](CHANGELOG.md)** - Version history and updates
+
+### Learning Resources
+
+- **[React Documentation](https://reactjs.org/docs)** - Learn React
+- **[TypeScript Handbook](https://www.typescriptlang.org/docs)** - TypeScript guide
+- **[Flask Documentation](https://flask.palletsprojects.com/)** - Flask framework
+- **[Tailwind CSS](https://tailwindcss.com/docs)** - CSS framework
+- **[shadcn/ui](https://ui.shadcn.com/)** - UI component library
+
+---
+
+## 🎯 Roadmap
+
+### Phase 1: Foundation ✅
+- [x] Basic expense management
+- [x] Real-time dashboard
+- [x] REST API endpoints
+- [x] TypeScript integration
+- [x] shadcn/ui components
+
+### Phase 2: AI Integration 🚧
+- [ ] Receipt OCR processing
+- [ ] Natural language queries
+- [ ] AI-powered categorization
+- [ ] Smart insights generation
+- [ ] Expense prediction models
+
+### Phase 3: Advanced Features 📋
+- [ ] Multi-user support
+- [ ] Role-based permissions
+- [ ] Advanced reporting
+- [ ] Export capabilities
+- [ ] Mobile app development
+
+### Phase 4: Enterprise 🔮
+- [ ] SSO integration
+- [ ] Advanced analytics
+- [ ] API rate limiting
+- [ ] Audit logging
+- [ ] Custom integrations
+
+---
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+```
+MIT License
+
+Copyright (c) 2025 Financial Copilot
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software...
+```
+
+---
+
 ## 🙏 Acknowledgments
 
-- [shadcn/ui](https://ui.shadcn.com/) for the amazing component library
-- [Cal.com](https://github.com/calcom/cal.com) for open-source inspiration
-- [OpenAI](https://openai.com/) for AI capabilities
-- The React and Flask communities for excellent documentation
+Special thanks to the amazing open-source community and these projects that inspired Financial Copilot:
+
+- **[shadcn/ui](https://ui.shadcn.com/)** for the incredible component library
+- **[Cal.com](https://github.com/calcom/cal.com)** for open-source inspiration and architectural patterns
+- **[Dub](https://github.com/dubinc/dub)** for demonstrating modern SaaS development practices
+- **[OpenAI](https://openai.com/)** for AI capabilities and API access
+- **The React and Flask communities** for excellent documentation and support
+
+---
+
+## 💫 Support
+
+- **⭐ Star this repository** if you find it helpful
+- **🐛 Report bugs** via GitHub Issues
+- **💡 Request features** through GitHub Discussions
+- **📧 Contact us** at [your-email@domain.com](mailto:your-email@domain.com)
 
 ---
 
 <div align="center">
-  <strong>Built with ❤️ and ☕</strong>
-  <br />
-  <sub>Star ⭐ the repo if you find it useful!</sub>
+  
+  **Built with ❤️ and ☕ by [DevanshuNEU](https://github.com/DevanshuNEU)**
+  
+  Made with modern web technologies • Designed for developers • Built for the future
+  
+  [⬆ Back to Top](#financial-copilot-)
+  
 </div>
