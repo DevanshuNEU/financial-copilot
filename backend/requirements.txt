@@ -1,14 +1,4 @@
 flask==3.1.0
 flask-cors==5.0.0
 flask-sqlalchemy==3.1.1
-flask-migrate==4.0.7
-psycopg2-binary==2.9.10
-redis==5.2.1
-openai==1.88.0
 python-dotenv==1.0.1
-Pillow==11.2.0
-pytesseract==0.3.14
-celery==5.4.0
-flask-socketio==5.4.1
-python-socketio==5.14.2
-gunicorn==24.0.0
