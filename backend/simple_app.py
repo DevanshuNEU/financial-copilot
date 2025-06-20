@@ -22,7 +22,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
 db = SQLAlchemy(app)
-CORS(app, origins=["http://localhost:3002", "http://localhost:3001", "http://localhost:3000"])
+CORS(app, origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"])
 
 # Models
 class ExpenseCategory(Enum):
