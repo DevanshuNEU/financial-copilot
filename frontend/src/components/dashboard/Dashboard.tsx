@@ -1,36 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { DashboardData, Expense } from '../../types';
+import AddExpenseModal from './AddExpenseModal';
 
 const Dashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [dashboardResponse, expensesResponse] = await Promise.all([
+        apiService.getDashboardData(),
+        apiService.getExpenses()
+      ]);
+      
+      setDashboardData(dashboardResponse);
+      setExpenses(expensesResponse.expenses);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load data. Make sure the backend is running on port 5002.');
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [dashboardResponse, expensesResponse] = await Promise.all([
-          apiService.getDashboardData(),
-          apiService.getExpenses()
-        ]);
-        
-        setDashboardData(dashboardResponse);
-        setExpenses(expensesResponse.expenses);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load data. Make sure the backend is running on port 5002.');
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  const handleExpenseAdded = () => {
+    // Refresh data when a new expense is added
+    fetchData();
+  };
 
   if (loading) {
     return (
@@ -67,9 +76,15 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="border-b pb-4">
-          <h1 className="text-3xl font-bold text-foreground">Financial Dashboard</h1>
-          <p className="text-muted-foreground">Track your expenses and insights</p>
+        <div className="border-b pb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Financial Dashboard</h1>
+            <p className="text-muted-foreground">Track your expenses and insights</p>
+          </div>
+          <Button onClick={() => setIsAddModalOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Expense
+          </Button>
         </div>
 
         {/* Overview Cards */}
@@ -129,7 +144,10 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {expenses.slice(0, 5).map((expense) => (
+              {expenses
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .slice(0, 5)
+                .map((expense) => (
                 <div key={expense.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{expense.description}</div>
@@ -155,6 +173,13 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Expense Modal */}
+      <AddExpenseModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onExpenseAdded={handleExpenseAdded}
+      />
     </div>
   );
 };
