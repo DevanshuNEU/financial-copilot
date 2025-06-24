@@ -17,6 +17,14 @@ import {
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
+  const handleGetStarted = () => {
+    navigate('/dashboard');
+  };
+
+  const handleSignIn = () => {
+    navigate('/dashboard');
+  };
+
   const features = [
     {
       icon: DollarSign,
@@ -77,13 +85,13 @@ const LandingPage: React.FC = () => {
             <div className="flex items-center gap-4">
               <Button 
                 variant="ghost" 
-                onClick={() => navigate('/dashboard')}
+                onClick={handleSignIn}
                 className="text-gray-600 hover:text-green-600"
               >
                 Sign In
               </Button>
               <Button 
-                onClick={() => navigate('/dashboard')}
+                onClick={handleGetStarted}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 Get Started Free
@@ -136,7 +144,7 @@ const LandingPage: React.FC = () => {
             >
               <Button 
                 size="lg"
-                onClick={() => navigate('/dashboard')}
+                onClick={handleGetStarted}
                 className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
               >
                 Start Your Financial Journey
@@ -310,7 +318,7 @@ const LandingPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg"
-              onClick={() => navigate('/dashboard')}
+              onClick={handleGetStarted}
               className="bg-white text-green-600 hover:bg-gray-50 px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
             >
               Get Started Free

@@ -13,7 +13,7 @@ const Navigation: React.FC = () => {
   const location = useLocation();
   
   const navItems = [
-    { path: '/', icon: Home, label: 'Dashboard', description: 'Quick overview' },
+    { path: '/dashboard', icon: Home, label: 'Dashboard', description: 'Quick overview' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics', description: 'Charts & insights' },
     { path: '/budget', icon: PiggyBank, label: 'Budget', description: 'Manage budgets' },
     { path: '/expenses', icon: Receipt, label: 'Expenses', description: 'Track spending' },
