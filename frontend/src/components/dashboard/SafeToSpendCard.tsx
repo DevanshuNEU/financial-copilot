@@ -1,175 +1,180 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { apiService } from '../../services/api';
 import { SafeToSpendResponse } from '../../types';
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
 
-const SafeToSpendCard: React.FC = () => {
-  const [safeToSpendData, setSafeToSpendData] = useState<SafeToSpendResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface SafeToSpendCardProps {
+  data: SafeToSpendResponse | null;
+}
 
-  useEffect(() => {
-    const fetchSafeToSpend = async () => {
-      try {
-        setLoading(true);
-        const data = await apiService.getSafeToSpend();
-        setSafeToSpendData(data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to calculate safe spending amount');
-        console.error('Safe to spend fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSafeToSpend();
-  }, []);
-
-  if (loading) {
+const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
+  if (!data) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Safe to Spend
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-32 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-48"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+        </div>
+      </div>
     );
   }
 
-  if (error || !safeToSpendData) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-600">
-            <AlertCircle className="h-5 w-5" />
-            Safe to Spend
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-red-600">{error || 'No budget data available'}</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Set up your monthly budgets to see spending recommendations!
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const isOverBudget = data.total_spent > data.total_budget;
+  const remainingBudget = data.total_budget - data.total_spent;
+  const budgetUsedPercentage = (data.total_spent / data.total_budget) * 100;
 
-  const { safe_to_spend, recommendations } = safeToSpendData;
-  const isOverBudget = safe_to_spend.total_spent > safe_to_spend.total_budget;
-  const remainingAmount = Math.max(0, safe_to_spend.discretionary_remaining);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'on_track': return 'bg-green-100 text-green-800';
-      case 'caution': return 'bg-yellow-100 text-yellow-800';
-      case 'over_budget': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  // Determine status and color
+  const getStatusInfo = () => {
+    if (budgetUsedPercentage <= 60) {
+      return {
+        status: "on track",
+        color: "text-green-600",
+        bgColor: "bg-green-50",
+        icon: CheckCircle,
+        badge: "success"
+      };
+    } else if (budgetUsedPercentage <= 90) {
+      return {
+        status: "good pace",
+        color: "text-blue-600", 
+        bgColor: "bg-blue-50",
+        icon: TrendingUp,
+        badge: "warning"
+      };
+    } else if (budgetUsedPercentage <= 100) {
+      return {
+        status: "watch closely",
+        color: "text-yellow-600",
+        bgColor: "bg-yellow-50", 
+        icon: AlertCircle,
+        badge: "warning"
+      };
+    } else {
+      return {
+        status: "over budget",
+        color: "text-red-600",
+        bgColor: "bg-red-50",
+        icon: TrendingDown,
+        badge: "destructive"
+      };
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'on_track': return <TrendingUp className="h-4 w-4" />;
-      case 'caution': return <AlertCircle className="h-4 w-4" />;
-      case 'over_budget': return <TrendingDown className="h-4 w-4" />;
-      default: return <DollarSign className="h-4 w-4" />;
-    }
-  };
+  const statusInfo = getStatusInfo();
+  const StatusIcon = statusInfo.icon;
 
   return (
-    <Card className={`border-l-4 ${
-      recommendations.status === 'on_track' 
-        ? 'border-l-green-500' 
-        : recommendations.status === 'caution' 
-        ? 'border-l-yellow-500' 
-        : 'border-l-red-500'
-    }`}>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Safe to Spend
-          </div>
-          <Badge className={getStatusColor(recommendations.status)}>
-            <div className="flex items-center gap-1">
-              {getStatusIcon(recommendations.status)}
-              {recommendations.status.replace('_', ' ')}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+      className="p-6 relative overflow-hidden"
+    >
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-green-100 to-transparent rounded-full -mr-16 -mt-16"></div>
+      
+      <div className="relative">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center justify-between mb-6"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-white" />
             </div>
-          </Badge>
-        </CardTitle>
-        <CardDescription>
-          Money available for discretionary spending this month
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Main Safe to Spend Amount */}
-        <div className="text-center">
-          <div className={`text-4xl font-bold ${
-            remainingAmount > 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
-            ${remainingAmount.toFixed(2)}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Safe to Spend</h3>
+              <p className="text-sm text-gray-500">Money available for discretionary spending this month</p>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Available for fun stuff this month
-          </p>
-        </div>
+          <Badge variant={statusInfo.badge as any} className="flex items-center gap-1">
+            <StatusIcon className="h-3 w-3" />
+            {statusInfo.status}
+          </Badge>
+        </motion.div>
 
-        {/* Daily Recommendation */}
-        <div className="bg-gray-50 rounded-lg p-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Today you can spend:</span>
-            <span className="text-lg font-bold text-blue-600">
-              ${recommendations.can_spend_today.toFixed(2)}
+        {/* Main Amount */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4, type: "spring", stiffness: 100 }}
+          className="text-center mb-6"
+        >
+          <div className={`text-4xl md:text-5xl font-bold ${statusInfo.color} mb-2`}>
+            ${Math.max(0, remainingBudget).toFixed(2)}
+          </div>
+          <p className="text-gray-600">
+            {isOverBudget ? 'Over budget this month' : 'Available for fun stuff this month'}
+          </p>
+        </motion.div>
+
+        {/* Daily breakdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="text-center mb-6"
+        >
+          <p className="text-sm text-gray-500 mb-1">Today you can spend:</p>
+          <div className="text-2xl font-bold text-blue-600">
+            ${data.daily_safe_amount.toFixed(2)}
+          </div>
+          <p className="text-xs text-gray-500">Based on {data.days_left} days left this month</p>
+        </motion.div>
+
+        {/* Budget breakdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100"
+        >
+          <div className="text-center">
+            <p className="text-sm text-gray-500">Total Budget</p>
+            <p className="font-semibold text-gray-900">${data.total_budget.toFixed(2)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-gray-500">Total Spent</p>
+            <p className={`font-semibold ${isOverBudget ? 'text-red-600' : 'text-gray-900'}`}>
+              ${data.total_spent.toFixed(2)}
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Progress indicator */}
+        <motion.div
+          initial={{ opacity: 0, scaleX: 0 }}
+          animate={{ opacity: 1, scaleX: 1 }}
+          transition={{ delay: 1, duration: 0.8 }}
+          className="mt-4"
+        >
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-gray-500">Budget used</span>
+            <span className={`text-xs font-medium ${statusInfo.color}`}>
+              {budgetUsedPercentage.toFixed(1)}%
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Based on {safe_to_spend.days_left_in_month} days left this month
-          </p>
-        </div>
-
-        {/* Budget Summary */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-muted-foreground">Total Budget</p>
-            <p className="font-semibold">${safe_to_spend.total_budget.toFixed(2)}</p>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(budgetUsedPercentage, 100)}%` }}
+              transition={{ delay: 1.2, duration: 1 }}
+              className={`h-2 rounded-full ${
+                budgetUsedPercentage <= 60 ? 'bg-green-500' :
+                budgetUsedPercentage <= 90 ? 'bg-blue-500' :
+                budgetUsedPercentage <= 100 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+            />
           </div>
-          <div>
-            <p className="text-muted-foreground">Total Spent</p>
-            <p className={`font-semibold ${
-              isOverBudget ? 'text-red-600' : 'text-gray-900'
-            }`}>
-              ${safe_to_spend.total_spent.toFixed(2)}
-            </p>
-          </div>
-        </div>
-
-        {/* Warning if over budget */}
-        {isOverBudget && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-red-800">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">Over Budget</span>
-            </div>
-            <p className="text-xs text-red-600 mt-1">
-              You're ${(safe_to_spend.total_spent - safe_to_spend.total_budget).toFixed(2)} over 
-              your monthly budget. Consider reducing discretionary spending.
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </motion.div>
+      </div>
+    </motion.div>
   );
 };
 
