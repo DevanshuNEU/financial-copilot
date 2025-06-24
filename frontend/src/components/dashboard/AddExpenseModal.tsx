@@ -22,6 +22,7 @@ import {
 import { Plus, Loader2 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { Expense } from '../../types';
+import toast from 'react-hot-toast';
 
 interface AddExpenseModalProps {
   onExpenseAdded: () => void;
@@ -120,12 +121,13 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onExpenseAdded }) => 
       await apiService.createExpense(expenseData);
       
       // Success! Close modal and refresh data
+      toast.success('Expense added successfully!');
       setOpen(false);
       resetForm();
       onExpenseAdded();
     } catch (error) {
       console.error('Failed to create expense:', error);
-      // You could add a toast notification here
+      toast.error('Failed to add expense. Please try again.');
     } finally {
       setLoading(false);
     }
