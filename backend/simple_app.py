@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func, and_
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -166,27 +167,106 @@ def get_dashboard_overview():
         total_expenses = db.session.query(db.func.sum(Expense.amount)).scalar() or 0
         expense_count = Expense.query.count()
         
-        # Category breakdown
-        from sqlalchemy import func
+        # Category breakdown with budget information
         category_data = db.session.query(
             Expense.category,
             func.sum(Expense.amount).label('total'),
             func.count(Expense.id).label('count')
         ).group_by(Expense.category).all()
         
+        # Get budget information for categories
+        budgets = {budget.category: budget.monthly_limit for budget in Budget.query.all()}
+        
+        # Enhanced category breakdown with budget data
+        enhanced_categories = []
+        for cat, total, count in category_data:
+            budget_limit = budgets.get(cat, 0)
+            enhanced_categories.append({
+                'category': cat.value,
+                'total': float(total),
+                'count': count,
+                'budget': budget_limit,
+                'budgetUsed': (float(total) / budget_limit * 100) if budget_limit > 0 else 0
+            })
+        
         return jsonify({
             'overview': {
                 'total_expenses': float(total_expenses),
                 'total_transactions': expense_count
             },
-            'category_breakdown': [
-                {
-                    'category': cat.value,
-                    'total': float(total),
-                    'count': count
-                }
-                for cat, total, count in category_data
-            ]
+            'category_breakdown': enhanced_categories
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard/weekly-comparison', methods=['GET'])
+def get_weekly_comparison():
+    try:
+        from datetime import timedelta
+        
+        today = datetime.now()
+        current_weekday = today.weekday()  # 0 = Monday, 6 = Sunday
+        
+        # Calculate this week's start (Monday)
+        days_since_monday = current_weekday
+        this_week_start = (today - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+        this_week_end = this_week_start + timedelta(days=6, hours=23, minutes=59, seconds=59)
+        
+        # Calculate last week's range
+        last_week_start = this_week_start - timedelta(days=7)
+        last_week_end = this_week_start - timedelta(seconds=1)
+        
+        # Get this week's expenses by day
+        this_week_expenses = db.session.query(
+            func.date(Expense.created_at).label('date'),
+            func.sum(Expense.amount).label('total')
+        ).filter(
+            and_(
+                Expense.created_at >= this_week_start,
+                Expense.created_at <= this_week_end
+            )
+        ).group_by(func.date(Expense.created_at)).all()
+        
+        # Get last week's expenses by day
+        last_week_expenses = db.session.query(
+            func.date(Expense.created_at).label('date'),
+            func.sum(Expense.amount).label('total')
+        ).filter(
+            and_(
+                Expense.created_at >= last_week_start,
+                Expense.created_at <= last_week_end
+            )
+        ).group_by(func.date(Expense.created_at)).all()
+        
+        # Create daily comparison data
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        daily_data = []
+        
+        # Convert query results to dictionaries for easier lookup
+        this_week_dict = {expense.date: float(expense.total) for expense in this_week_expenses}
+        last_week_dict = {expense.date: float(expense.total) for expense in last_week_expenses}
+        
+        for i in range(7):
+            current_date = (this_week_start + timedelta(days=i)).date()
+            last_week_date = (last_week_start + timedelta(days=i)).date()
+            
+            daily_data.append({
+                'day': days[i],
+                'dayName': days[i],
+                'thisWeek': this_week_dict.get(current_date, 0),
+                'lastWeek': last_week_dict.get(last_week_date, 0)
+            })
+        
+        # Calculate totals
+        this_week_total = sum(this_week_dict.values())
+        last_week_total = sum(last_week_dict.values())
+        
+        return jsonify({
+            'weeklyData': daily_data,
+            'thisWeekTotal': this_week_total,
+            'lastWeekTotal': last_week_total,
+            'currentDayOfWeek': current_weekday
         })
         
     except Exception as e:
@@ -251,7 +331,6 @@ def get_safe_to_spend():
         budgets = {budget.category: budget.monthly_limit for budget in Budget.query.all()}
         
         # Get current month's spending by category
-        from sqlalchemy import func, and_
         monthly_spending = db.session.query(
             Expense.category,
             func.sum(Expense.amount).label('spent')

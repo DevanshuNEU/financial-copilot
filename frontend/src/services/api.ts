@@ -80,6 +80,21 @@ class ApiService {
   async getSafeToSpend(): Promise<SafeToSpendResponse> {
     return this.fetchApi('/api/safe-to-spend');
   }
+
+  // Weekly Comparison Data
+  async getWeeklyComparison(): Promise<{
+    weeklyData: Array<{
+      day: string;
+      dayName: string;
+      thisWeek: number;
+      lastWeek: number;
+    }>;
+    thisWeekTotal: number;
+    lastWeekTotal: number;
+    currentDayOfWeek: number;
+  }> {
+    return this.fetchApi('/api/dashboard/weekly-comparison');
+  }
 }
 
 export const apiService = new ApiService();
