@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiService } from '../../services/api';
 import { DashboardData, Expense } from '../../types';
+import AddExpenseModal from './AddExpenseModal';
 
 const Dashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -9,26 +10,26 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [dashboardResponse, expensesResponse] = await Promise.all([
-          apiService.getDashboardData(),
-          apiService.getExpenses()
-        ]);
-        
-        setDashboardData(dashboardResponse);
-        setExpenses(expensesResponse.expenses);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load data. Make sure the backend is running on port 5002.');
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [dashboardResponse, expensesResponse] = await Promise.all([
+        apiService.getDashboardData(),
+        apiService.getExpenses()
+      ]);
+      
+      setDashboardData(dashboardResponse);
+      setExpenses(expensesResponse.expenses);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load data. Make sure the backend is running on port 5002.');
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -67,9 +68,12 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="border-b pb-4">
-          <h1 className="text-3xl font-bold text-foreground">Financial Dashboard</h1>
-          <p className="text-muted-foreground">Track your expenses and insights</p>
+        <div className="border-b pb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Financial Dashboard</h1>
+            <p className="text-muted-foreground">Track your expenses and insights</p>
+          </div>
+          <AddExpenseModal onExpenseAdded={fetchData} />
         </div>
 
         {/* Overview Cards */}
@@ -129,7 +133,10 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {expenses.slice(0, 5).map((expense) => (
+              {expenses
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .slice(0, 5)
+                .map((expense) => (
                 <div key={expense.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{expense.description}</div>
