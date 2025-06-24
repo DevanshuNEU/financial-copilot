@@ -1,4 +1,4 @@
-import { Expense, DashboardData, ExpensesResponse } from '../types';
+import { Expense, DashboardData, ExpensesResponse, Budget, SafeToSpendResponse } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002';
 
@@ -47,6 +47,38 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(expense),
     });
+  }
+
+  // Update existing expense
+  async updateExpense(id: number, expense: Partial<Omit<Expense, 'id' | 'created_at'>>): Promise<Expense> {
+    return this.fetchApi(`/api/expenses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(expense),
+    });
+  }
+
+  // Delete expense
+  async deleteExpense(id: number): Promise<{ message: string }> {
+    return this.fetchApi(`/api/expenses/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Budget Management
+  async getBudgets(): Promise<{ budgets: Budget[] }> {
+    return this.fetchApi('/api/budgets');
+  }
+
+  async createOrUpdateBudget(category: string, monthly_limit: number): Promise<Budget> {
+    return this.fetchApi('/api/budgets', {
+      method: 'POST',
+      body: JSON.stringify({ category, monthly_limit }),
+    });
+  }
+
+  // Safe to Spend
+  async getSafeToSpend(): Promise<SafeToSpendResponse> {
+    return this.fetchApi('/api/safe-to-spend');
   }
 }
 
