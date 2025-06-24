@@ -77,3 +77,6 @@ temp/
 
 # Local development documentation (keep private)
 .local-docs/
+
+# Backend SQLite instance files
+backend/instance/
