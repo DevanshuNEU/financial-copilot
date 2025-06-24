@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navigation from './components/navigation/Navigation';
 import { 
-  LandingPage,
   DashboardPage, 
   AnalyticsPage, 
   BudgetPage, 
@@ -15,42 +14,17 @@ import './App.css';
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* Landing Page - No Navigation */}
-        <Route path="/" element={<LandingPage />} />
-        
-        {/* App Pages - With Navigation */}
-        <Route path="/dashboard" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <DashboardPage />
-          </div>
-        } />
-        <Route path="/analytics" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <AnalyticsPage />
-          </div>
-        } />
-        <Route path="/budget" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <BudgetPage />
-          </div>
-        } />
-        <Route path="/expenses" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <ExpensesPage />
-          </div>
-        } />
-        <Route path="/settings" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <SettingsPage />
-          </div>
-        } />
-      </Routes>
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <Routes>
+          {/* App Pages - All with Navigation */}
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/budget" element={<BudgetPage />} />
+          <Route path="/expenses" element={<ExpensesPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </div>
       
       <Toaster 
         position="top-right"
