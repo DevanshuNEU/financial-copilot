@@ -2,17 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { apiService } from '../../services/api';
-import { DashboardData, Expense } from '../../types';
+import { DashboardData, Expense, WeeklyComparisonData, SafeToSpendResponse } from '../../types';
 import AddExpenseModal from './AddExpenseModal';
 import { EditExpenseModal } from './EditExpenseModal';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import SafeToSpendCard from './SafeToSpendCard';
+import SpendingDonutChart from './SpendingDonutChart';
+import FinancialHealthGauge from './FinancialHealthGauge';
+import WeeklyComparison from './WeeklyComparison';
 import { Edit2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [weeklyData, setWeeklyData] = useState<WeeklyComparisonData | null>(null);
+  const [safeToSpendData, setSafeToSpendData] = useState<SafeToSpendResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -31,13 +36,17 @@ const Dashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [dashboardResponse, expensesResponse] = await Promise.all([
+      const [dashboardResponse, expensesResponse, weeklyResponse, safeToSpendResponse] = await Promise.all([
         apiService.getDashboardData(),
-        apiService.getExpenses()
+        apiService.getExpenses(),
+        apiService.getWeeklyComparison(),
+        apiService.getSafeToSpend()
       ]);
       
       setDashboardData(dashboardResponse);
       setExpenses(expensesResponse.expenses);
+      setWeeklyData(weeklyResponse);
+      setSafeToSpendData(safeToSpendResponse);
       setError(null);
     } catch (err) {
       setError('Failed to load data. Make sure the backend is running on port 5002.');
@@ -140,6 +149,27 @@ const Dashboard: React.FC = () => {
         {/* Safe to Spend Calculator - Priority Feature */}
         <SafeToSpendCard />
 
+        {/* Financial Health Gauge */}
+        {safeToSpendData && (
+          <FinancialHealthGauge
+            safeToSpend={safeToSpendData.safe_to_spend.discretionary_remaining}
+            totalBudget={safeToSpendData.safe_to_spend.total_budget}
+            totalSpent={safeToSpendData.safe_to_spend.total_spent}
+            daysLeftInMonth={safeToSpendData.safe_to_spend.days_left_in_month}
+            dailySafeAmount={safeToSpendData.safe_to_spend.daily_safe_amount}
+          />
+        )}
+
+        {/* Weekly Comparison */}
+        {weeklyData && weeklyData.weeklyData && (
+          <WeeklyComparison
+            weeklyData={weeklyData.weeklyData}
+            thisWeekTotal={weeklyData.thisWeekTotal}
+            lastWeekTotal={weeklyData.lastWeekTotal}
+            currentDayOfWeek={weeklyData.currentDayOfWeek}
+          />
+        )}
+
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
@@ -166,31 +196,18 @@ const Dashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Category Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Expenses by Category</CardTitle>
-            <CardDescription>Breakdown of spending by category</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {dashboardData?.category_breakdown.map((category) => (
-                <div key={category.category} className="flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow bg-white">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex-shrink-0"></div>
-                    <div>
-                      <span className="font-medium text-gray-900 capitalize">{category.category}</span>
-                      <div className="text-sm text-gray-500">{category.count} transaction{category.count !== 1 ? 's' : ''}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-lg text-gray-900">${category.total.toFixed(2)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Interactive Category Breakdown */}
+        {dashboardData && safeToSpendData && (
+          <SpendingDonutChart
+            data={dashboardData.category_breakdown.map(cat => ({
+              ...cat,
+              budget: safeToSpendData.budget_status.find(b => b.category === cat.category)?.limit || 0,
+              lastWeekTotal: 0, // TODO: Add last week data from backend
+            }))}
+            totalSpent={dashboardData.overview.total_expenses}
+            totalBudget={safeToSpendData.safe_to_spend.total_budget}
+          />
+        )}
         {/* Recent Expenses */}
         <Card>
           <CardHeader>

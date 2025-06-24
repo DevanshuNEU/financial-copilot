@@ -52,11 +52,27 @@ export interface CategoryBreakdown {
   category: string;
   total: number;
   count: number;
+  budget?: number;
+  budgetUsed?: number;
 }
 
 export interface DashboardData {
   overview: DashboardOverview;
   category_breakdown: CategoryBreakdown[];
+}
+
+export interface WeeklyData {
+  day: string;
+  dayName: string;
+  thisWeek: number;
+  lastWeek: number;
+}
+
+export interface WeeklyComparisonData {
+  weeklyData: WeeklyData[];
+  thisWeekTotal: number;
+  lastWeekTotal: number;
+  currentDayOfWeek: number;
 }
 
 export interface ExpensesResponse {
