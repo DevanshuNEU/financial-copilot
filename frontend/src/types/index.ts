@@ -8,6 +8,41 @@ export interface Expense {
   created_at: string;
 }
 
+export interface Budget {
+  id: number;
+  category: string;
+  monthly_limit: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BudgetStatus {
+  category: string;
+  limit: number;
+  spent: number;
+  remaining: number;
+  over_budget: number;
+  percentage_used: number;
+}
+
+export interface SafeToSpend {
+  total_budget: number;
+  total_spent: number;
+  total_remaining: number;
+  discretionary_remaining: number;
+  days_left_in_month: number;
+  daily_safe_amount: number;
+}
+
+export interface SafeToSpendResponse {
+  safe_to_spend: SafeToSpend;
+  budget_status: BudgetStatus[];
+  recommendations: {
+    can_spend_today: number;
+    status: 'on_track' | 'caution' | 'over_budget';
+  };
+}
+
 export interface DashboardOverview {
   total_expenses: number;
   total_transactions: number;
