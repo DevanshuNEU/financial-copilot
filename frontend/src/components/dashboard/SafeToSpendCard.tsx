@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SafeToSpendResponse } from '../../types';
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
@@ -12,8 +11,8 @@ interface SafeToSpendCardProps {
 const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
   if (!data) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
+      <div className="p-8 h-full flex items-center justify-center">
+        <div className="animate-pulse space-y-4 w-full">
           <div className="h-4 bg-gray-200 rounded w-3/4"></div>
           <div className="h-8 bg-gray-200 rounded w-1/2"></div>
           <div className="h-4 bg-gray-200 rounded w-full"></div>
@@ -69,95 +68,97 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-      className="p-6 relative overflow-hidden"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+      className="p-8 h-full bg-gradient-to-br from-white to-green-50/20 relative overflow-hidden"
     >
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-green-100 to-transparent rounded-full -mr-16 -mt-16"></div>
+      {/* Subtle background decoration */}
+      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-green-100/10 to-transparent rounded-full -mr-12 -mt-12"></div>
       
-      <div className="relative">
-        {/* Header */}
+      <div className="relative h-full flex flex-col justify-between">
+        {/* Clean Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
           className="flex items-center justify-between mb-6"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+            <div className="w-11 h-11 bg-gradient-to-r from-green-600 to-green-700 rounded-lg flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900">Safe to Spend</h3>
-              <p className="text-sm text-gray-500">Money available for discretionary spending this month</p>
+              <h3 className="text-lg font-semibold text-gray-900">Safe to Spend</h3>
+              <p className="text-sm text-gray-600">Available for discretionary spending</p>
             </div>
           </div>
-          <Badge variant={statusInfo.badge as any} className="flex items-center gap-1">
+          <Badge variant={statusInfo.badge as any} className="flex items-center gap-1.5 text-xs font-medium">
             <StatusIcon className="h-3 w-3" />
             {statusInfo.status}
           </Badge>
         </motion.div>
 
-        {/* Main Amount */}
+        {/* Main Amount - Clean and Minimal */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.4, type: "spring", stiffness: 100 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
           className="text-center mb-6"
         >
-          <div className={`text-4xl md:text-5xl font-bold ${statusInfo.color} mb-2`}>
+          <div className={`text-4xl font-bold ${statusInfo.color} mb-2`}>
             ${Math.max(0, remainingBudget).toFixed(2)}
           </div>
-          <p className="text-gray-600">
-            {isOverBudget ? 'Over budget this month' : 'Available for fun stuff this month'}
+          <p className="text-gray-600 text-sm">
+            {isOverBudget ? '⚠️ Over budget this month' : '🎉 Available for fun stuff'}
           </p>
         </motion.div>
 
-        {/* Daily breakdown */}
+        {/* Daily Breakdown - Simplified */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="text-center mb-6"
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-center mb-6 p-4 bg-white/50 rounded-lg border border-gray-100/50"
         >
-          <p className="text-sm text-gray-500 mb-1">Today you can spend:</p>
+          <p className="text-sm text-gray-600 mb-1 font-medium">Today you can spend</p>
           <div className="text-2xl font-bold text-blue-600">
             ${safeToSpend.daily_safe_amount.toFixed(2)}
           </div>
-          <p className="text-xs text-gray-500">Based on {safeToSpend.days_left_in_month} days left this month</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Based on {safeToSpend.days_left_in_month} days remaining
+          </p>
         </motion.div>
 
-        {/* Budget breakdown */}
+        {/* Budget Breakdown - Clean Grid */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100"
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="grid grid-cols-2 gap-4 mb-6"
         >
-          <div className="text-center">
-            <p className="text-sm text-gray-500">Total Budget</p>
-            <p className="font-semibold text-gray-900">${safeToSpend.total_budget.toFixed(2)}</p>
+          <div className="text-center p-3 bg-gray-50/50 rounded-lg">
+            <p className="text-sm text-gray-600 font-medium">Total Budget</p>
+            <p className="font-bold text-gray-900">${safeToSpend.total_budget.toFixed(2)}</p>
           </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-500">Total Spent</p>
-            <p className={`font-semibold ${isOverBudget ? 'text-red-600' : 'text-gray-900'}`}>
+          <div className="text-center p-3 bg-gray-50/50 rounded-lg">
+            <p className="text-sm text-gray-600 font-medium">Total Spent</p>
+            <p className={`font-bold ${isOverBudget ? 'text-red-600' : 'text-gray-900'}`}>
               ${safeToSpend.total_spent.toFixed(2)}
             </p>
           </div>
         </motion.div>
 
-        {/* Progress indicator */}
+        {/* Clean Progress Indicator */}
         <motion.div
-          initial={{ opacity: 0, scaleX: 0 }}
-          animate={{ opacity: 1, scaleX: 1 }}
-          transition={{ delay: 1, duration: 0.8 }}
-          className="mt-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+          className="space-y-2"
         >
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-gray-500">Budget used</span>
-            <span className={`text-xs font-medium ${statusInfo.color}`}>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600 font-medium">Budget used</span>
+            <span className={`text-sm font-bold ${statusInfo.color}`}>
               {budgetUsedPercentage.toFixed(1)}%
             </span>
           </div>
@@ -165,7 +166,7 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(budgetUsedPercentage, 100)}%` }}
-              transition={{ delay: 1.2, duration: 1 }}
+              transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
               className={`h-2 rounded-full ${
                 budgetUsedPercentage <= 60 ? 'bg-green-500' :
                 budgetUsedPercentage <= 90 ? 'bg-blue-500' :
