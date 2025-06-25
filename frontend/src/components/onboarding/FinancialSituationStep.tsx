@@ -87,10 +87,10 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
         transition={{ delay: 0.1 }}
         className="space-y-4"
       >
-        <Label className="text-lg font-semibold text-gray-900">
-          💰 How much money do you have to work with each month?
+        <Label className="text-xl font-bold text-gray-900">
+          How much money do you have to work with each month?
         </Label>
-        <p className="text-sm text-gray-600">
+        <p className="text-gray-600">
           Include everything: allowance, job income, family support - whatever you get regularly.
         </p>
         
@@ -159,8 +159,8 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
         transition={{ delay: 0.2 }}
         className="space-y-3"
       >
-        <Label className="text-lg font-semibold text-gray-900">
-          🌍 What currency do you use?
+        <Label className="text-xl font-bold text-gray-900">
+          What currency do you use?
         </Label>
         <Select value={currency} onValueChange={setCurrency}>
           <SelectTrigger className="text-lg">
@@ -186,10 +186,10 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
         transition={{ delay: 0.3 }}
         className="space-y-4"
       >
-        <Label className="text-lg font-semibold text-gray-900">
-          🍕 Quick question: Are you on a meal plan?
+        <Label className="text-xl font-bold text-gray-900">
+          Are you on a meal plan?
         </Label>
-        <p className="text-sm text-gray-600">
+        <p className="text-gray-600">
           This helps us understand your food spending patterns.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -205,7 +205,7 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-lg">🏫</span>
+                <GraduationCap className="h-5 w-5 text-green-600" />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">Yes, I have a meal plan</div>
@@ -226,7 +226,7 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-lg">🛒</span>
+                <Coffee className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">No, I buy my own food</div>
@@ -237,30 +237,19 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
         </div>
       </motion.div>
 
-      {/* Continue Button */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="pt-4"
-      >
-        <Button
-          onClick={validateAndContinue}
-          className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-3"
-          disabled={!monthlyBudget}
+      {/* Success Message */}
+      {monthlyBudget && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-center p-4 bg-green-50 rounded-lg border border-green-200"
         >
-          Continue to Fixed Costs →
-        </Button>
-        {monthlyBudget && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center text-sm text-gray-600 mt-2"
-          >
-            Great! You'll have {selectedCurrency?.symbol}{monthlyBudget} to work with each month 🎉
-          </motion.p>
-        )}
-      </motion.div>
+          <p className="text-green-800 font-medium">
+            Great! You'll have {selectedCurrency?.symbol}{monthlyBudget} to work with each month
+          </p>
+        </motion.div>
+      )}
     </div>
   );
 };
