@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navigation from './components/navigation/Navigation';
-import ScrollToTop from './components/common/ScrollToTop';
+import ScrollToTop from './components/ui/ScrollToTop';
 import { 
   LandingPage,
   DashboardPage, 

@@ -1,213 +1,214 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Target, AlertTriangle } from 'lucide-react';
+import { SafeToSpendResponse } from '../../types';
 
 interface FinancialHealthGaugeProps {
-  safeToSpend: number;
-  totalBudget: number;
-  totalSpent: number;
-  daysLeftInMonth: number;
-  dailySafeAmount: number;
-  monthlyTrend?: number; // Percentage change from last month
+  data?: SafeToSpendResponse | null;
 }
 
-const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({
-  safeToSpend,
-  totalBudget,
-  totalSpent,
-  daysLeftInMonth,
-  dailySafeAmount,
-  monthlyTrend = 0,
-}) => {
-  // Calculate health metrics
-  const budgetUsedPercent = (totalSpent / totalBudget) * 100;
-  const remainingBudgetPercent = Math.max(0, 100 - budgetUsedPercent);
+const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data }) => {
+  if (!data) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-16 bg-gray-200 rounded-full w-16 mx-auto"></div>
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const safeToSpend = data.safe_to_spend;
+  const totalBudget = safeToSpend.total_budget;
+  const totalSpent = safeToSpend.total_spent;
+  const dailySafeAmount = safeToSpend.daily_safe_amount;
+  const daysLeftInMonth = safeToSpend.days_left_in_month;
+
+  const budgetUsedPercentage = (totalSpent / totalBudget) * 100;
+  const remainingBudgetPercent = 100 - budgetUsedPercentage;
   
-  // Determine financial health status
+  // Determine health status
   const getHealthStatus = () => {
-    if (budgetUsedPercent <= 70) return 'excellent';
-    if (budgetUsedPercent <= 85) return 'good';
-    if (budgetUsedPercent <= 100) return 'caution';
-    return 'over';
+    if (budgetUsedPercentage <= 60) {
+      return {
+        status: 'Excellent! You\'re doing great!',
+        mood: '😊',
+        color: 'text-green-600',
+        bgColor: 'from-green-400 to-green-600',
+        percentage: budgetUsedPercentage
+      };
+    } else if (budgetUsedPercentage <= 80) {
+      return {
+        status: 'Good progress, stay focused!',
+        mood: '🎯',
+        color: 'text-blue-600',
+        bgColor: 'from-blue-400 to-blue-600',
+        percentage: budgetUsedPercentage
+      };
+    } else if (budgetUsedPercentage <= 100) {
+      return {
+        status: 'Watch your spending closely',
+        mood: '⚠️',
+        color: 'text-yellow-600',
+        bgColor: 'from-yellow-400 to-yellow-600',
+        percentage: budgetUsedPercentage
+      };
+    } else {
+      return {
+        status: 'Over budget - time to adjust',
+        mood: '🚨',
+        color: 'text-red-600',
+        bgColor: 'from-red-400 to-red-600',
+        percentage: 100
+      };
+    }
   };
 
   const healthStatus = getHealthStatus();
 
-  const getHealthConfig = () => {
-    switch (healthStatus) {
-      case 'excellent':
-        return {
-          color: 'text-green-600',
-          bgColor: 'bg-green-500',
-          lightBg: 'bg-green-50',
-          emoji: '😊',
-          message: 'Excellent! You\'re doing great!',
-          suggestion: 'You have room to treat yourself occasionally.',
-        };
-      case 'good':
-        return {
-          color: 'text-blue-600',
-          bgColor: 'bg-blue-500',
-          lightBg: 'bg-blue-50',
-          emoji: '🎯',
-          message: 'Good progress! Stay on track.',
-          suggestion: 'Continue your current spending habits.',
-        };
-      case 'caution':
-        return {
-          color: 'text-yellow-600',
-          bgColor: 'bg-yellow-500',
-          lightBg: 'bg-yellow-50',
-          emoji: '⚠️',
-          message: 'Be mindful of your spending.',
-          suggestion: 'Consider reducing non-essential expenses.',
-        };
-      default:
-        return {
-          color: 'text-red-600',
-          bgColor: 'bg-red-500',
-          lightBg: 'bg-red-50',
-          emoji: '🚨',
-          message: 'Over budget - time to adjust.',
-          suggestion: 'Focus on essential expenses only.',
-        };
-    }
-  };
-
-  const config = getHealthConfig();
-
-  // Calculate circular progress for the gauge
-  const gaugePercent = Math.min(budgetUsedPercent, 100);
-  const circumference = 2 * Math.PI * 45; // radius = 45
-  const strokeDashoffset = circumference - (gaugePercent / 100) * circumference;
-
-  const getPrediction = () => {
-    if (daysLeftInMonth <= 0) return "Month ending soon!";
-    
-    const currentPace = totalSpent / (30 - daysLeftInMonth);
-    const projectedMonthEnd = currentPace * 30;
-    const projectedRemaining = totalBudget - projectedMonthEnd;
-    
-    if (projectedRemaining > 0) {
-      return `On track to save $${projectedRemaining.toFixed(0)} this month`;
-    } else {
-      return `May exceed budget by $${Math.abs(projectedRemaining).toFixed(0)}`;
-    }
-  };
-
   return (
-    <Card className={`${config.lightBg} border-l-4 border-l-current ${config.color}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <span className="text-2xl">{config.emoji}</span>
-            Financial Health
-          </span>
-          {monthlyTrend !== 0 && (
-            <div className={`flex items-center gap-1 text-sm ${
-              monthlyTrend > 0 ? 'text-red-500' : 'text-green-500'
-            }`}>
-              {monthlyTrend > 0 ? 
-                <TrendingUp className="h-4 w-4" /> : 
-                <TrendingDown className="h-4 w-4" />
-              }
-              {Math.abs(monthlyTrend).toFixed(0)}% vs last month
-            </div>
-          )}
-        </CardTitle>
-        <CardDescription className={config.color}>
-          {config.message}
-        </CardDescription>
-      </CardHeader>
+    <div className="p-6 relative">
+      {/* Background decoration */}
+      <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-blue-100 to-transparent rounded-full -ml-16 -mt-16"></div>
       
-      <CardContent className="space-y-6">
-        {/* Circular Gauge */}
-        <div className="flex items-center justify-center">
-          <div className="relative w-32 h-32">
-            <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-              {/* Background circle */}
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                className="text-gray-200"
-              />
-              {/* Progress circle */}
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                className={`transition-all duration-1000 ease-out ${config.color.replace('text-', 'text-')}`}
-                style={{
-                  strokeDashoffset,
-                }}
-              />
-            </svg>
-            
-            {/* Center content */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className={`text-2xl font-bold ${config.color}`}>
-                {gaugePercent.toFixed(0)}%
-              </div>
+      <div className="relative">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-center mb-6"
+        >
+          <h3 className="text-lg font-bold text-gray-900 mb-1">
+            {healthStatus.mood} Financial Health
+          </h3>
+          <p className={`text-sm font-medium ${healthStatus.color}`}>
+            {healthStatus.status}
+          </p>
+        </motion.div>
+
+        {/* Circular Progress */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.4, type: "spring", stiffness: 100 }}
+          className="relative w-32 h-32 mx-auto mb-6"
+        >
+          {/* Background circle */}
+          <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 36 36">
+            <path
+              className="text-gray-200"
+              d="M18 2.0845
+                a 15.9155 15.9155 0 0 1 0 31.831
+                a 15.9155 15.9155 0 0 1 0 -31.831"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            {/* Progress circle */}
+            <motion.path
+              className={`bg-gradient-to-r ${healthStatus.bgColor}`}
+              d="M18 2.0845
+                a 15.9155 15.9155 0 0 1 0 31.831
+                a 15.9155 15.9155 0 0 1 0 -31.831"
+              fill="none"
+              stroke="url(#gradient)"
+              strokeWidth="2"
+              strokeDasharray={`${healthStatus.percentage}, 100`}
+              initial={{ strokeDasharray: "0, 100" }}
+              animate={{ strokeDasharray: `${healthStatus.percentage}, 100` }}
+              transition={{ duration: 1.5, delay: 0.8 }}
+            />
+            {/* Gradient definition */}
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" className="text-blue-400" stopColor="currentColor" />
+                <stop offset="100%" className="text-blue-600" stopColor="currentColor" />
+              </linearGradient>
+            </defs>
+          </svg>
+          
+          {/* Center content */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 1, duration: 0.5 }}
+                className={`text-2xl font-bold ${healthStatus.color}`}
+              >
+                {Math.round(budgetUsedPercentage)}%
+              </motion.div>
               <div className="text-xs text-gray-500">Budget Used</div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-3 bg-white rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
-              ${safeToSpend.toFixed(0)}
+        {/* Stats Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
+          className="grid grid-cols-2 gap-4"
+        >
+          <div className="text-center p-3 bg-green-50 rounded-lg">
+            <div className="text-lg font-bold text-green-600">
+              ${safeToSpend.discretionary_remaining.toFixed(0)}
             </div>
-            <div className="text-sm text-gray-600">Safe to Spend</div>
+            <div className="text-xs text-gray-600">Safe to Spend</div>
           </div>
-          
-          <div className="text-center p-3 bg-white rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
+          <div className="text-center p-3 bg-blue-50 rounded-lg">
+            <div className="text-lg font-bold text-blue-600">
               ${dailySafeAmount.toFixed(0)}
             </div>
-            <div className="text-sm text-gray-600">Per Day</div>
+            <div className="text-xs text-gray-600">Per Day</div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Smart Insights */}
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
-            <Target className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium">Smart Suggestion</div>
-              <div className="text-sm text-gray-600">{config.suggestion}</div>
-            </div>
+        {/* Smart Suggestion */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.4 }}
+          className="mt-6 p-4 bg-gray-50 rounded-lg"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="h-4 w-4 text-green-600" />
+            <span className="text-sm font-medium text-gray-900">Smart Suggestion</span>
           </div>
+          <p className="text-sm text-gray-600">
+            {budgetUsedPercentage <= 70 
+              ? "You have room to treat yourself occasionally." 
+              : budgetUsedPercentage <= 90
+              ? "Consider meal prepping to save money this week."
+              : "Focus on essentials only for the rest of the month."
+            }
+          </p>
+        </motion.div>
 
-          <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
-            <TrendingUp className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium">Month-End Prediction</div>
-              <div className="text-sm text-gray-600">{getPrediction()}</div>
-            </div>
+        {/* Month-End Prediction */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.6 }}
+          className="mt-4 p-4 border border-gray-200 rounded-lg"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-gray-900">Month-End Prediction</span>
           </div>
-
-          {daysLeftInMonth > 0 && (
-            <div className="text-center p-2 bg-white rounded-lg border">
-              <div className="text-xs text-gray-500">
-                {daysLeftInMonth} days left in month
-              </div>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          <p className="text-sm text-gray-600">
+            {budgetUsedPercentage <= 100 
+              ? `On track to save $${(totalBudget - totalSpent).toFixed(0)} this month`
+              : `Projected to exceed budget by $${(totalSpent - totalBudget).toFixed(0)}`
+            }
+          </p>
+        </motion.div>
+      </div>
+    </div>
   );
 };
 

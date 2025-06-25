@@ -22,9 +22,10 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
     );
   }
 
-  const isOverBudget = data.total_spent > data.total_budget;
-  const remainingBudget = data.total_budget - data.total_spent;
-  const budgetUsedPercentage = (data.total_spent / data.total_budget) * 100;
+  const safeToSpend = data.safe_to_spend;
+  const isOverBudget = safeToSpend.total_spent > safeToSpend.total_budget;
+  const remainingBudget = safeToSpend.total_budget - safeToSpend.total_spent;
+  const budgetUsedPercentage = (safeToSpend.total_spent / safeToSpend.total_budget) * 100;
 
   // Determine status and color
   const getStatusInfo = () => {
@@ -123,9 +124,9 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
         >
           <p className="text-sm text-gray-500 mb-1">Today you can spend:</p>
           <div className="text-2xl font-bold text-blue-600">
-            ${data.daily_safe_amount.toFixed(2)}
+            ${safeToSpend.daily_safe_amount.toFixed(2)}
           </div>
-          <p className="text-xs text-gray-500">Based on {data.days_left} days left this month</p>
+          <p className="text-xs text-gray-500">Based on {safeToSpend.days_left_in_month} days left this month</p>
         </motion.div>
 
         {/* Budget breakdown */}
@@ -137,12 +138,12 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
         >
           <div className="text-center">
             <p className="text-sm text-gray-500">Total Budget</p>
-            <p className="font-semibold text-gray-900">${data.total_budget.toFixed(2)}</p>
+            <p className="font-semibold text-gray-900">${safeToSpend.total_budget.toFixed(2)}</p>
           </div>
           <div className="text-center">
             <p className="text-sm text-gray-500">Total Spent</p>
             <p className={`font-semibold ${isOverBudget ? 'text-red-600' : 'text-gray-900'}`}>
-              ${data.total_spent.toFixed(2)}
+              ${safeToSpend.total_spent.toFixed(2)}
             </p>
           </div>
         </motion.div>
