@@ -18,7 +18,7 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/dashboard');
+    navigate('/onboarding');
   };
 
   const handleSignIn = () => {
