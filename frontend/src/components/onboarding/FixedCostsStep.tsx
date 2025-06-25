@@ -22,14 +22,14 @@ interface FixedCostsStepProps {
 }
 
 const commonFixedCosts = [
-  { name: 'Rent/Dorm', amount: 800, category: 'housing', icon: Home, color: 'bg-orange-500' },
-  { name: 'Meal Plan', amount: 450, category: 'food', icon: Home, color: 'bg-green-500' },
-  { name: 'Internet/WiFi', amount: 40, category: 'utilities', icon: Wifi, color: 'bg-blue-500' },
-  { name: 'Phone Bill', amount: 50, category: 'utilities', icon: Phone, color: 'bg-purple-500' },
-  { name: 'Netflix', amount: 15, category: 'subscriptions', icon: Tv, color: 'bg-red-500' },
-  { name: 'Spotify', amount: 10, category: 'subscriptions', icon: Tv, color: 'bg-green-600' },
-  { name: 'Gym Membership', amount: 30, category: 'health', icon: Dumbbell, color: 'bg-yellow-500' },
-  { name: 'Car Insurance', amount: 100, category: 'transportation', icon: Car, color: 'bg-indigo-500' },
+  { name: 'Rent/Dorm', category: 'housing', icon: Home, color: 'bg-orange-500' },
+  { name: 'Meal Plan', category: 'food', icon: Home, color: 'bg-green-500' },
+  { name: 'Internet/WiFi', category: 'utilities', icon: Wifi, color: 'bg-blue-500' },
+  { name: 'Phone Bill', category: 'utilities', icon: Phone, color: 'bg-purple-500' },
+  { name: 'Netflix', category: 'subscriptions', icon: Tv, color: 'bg-red-500' },
+  { name: 'Spotify', category: 'subscriptions', icon: Tv, color: 'bg-green-600' },
+  { name: 'Gym Membership', category: 'health', icon: Dumbbell, color: 'bg-yellow-500' },
+  { name: 'Car Insurance', category: 'transportation', icon: Car, color: 'bg-indigo-500' },
 ];
 
 const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
@@ -41,6 +41,7 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
   const [customName, setCustomName] = useState('');
   const [customAmount, setCustomAmount] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [quickExpenseInput, setQuickExpenseInput] = useState<{name: string, category: string} | null>(null);
 
   const currencies = {
     USD: '$', EUR: '€', GBP: '£', CAD: 'C$', AUD: 'A$', INR: '₹'
@@ -51,12 +52,30 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
   const remainingBudget = data.monthlyBudget - totalFixedCosts;
 
   const addQuickCost = (quickCost: typeof commonFixedCosts[0]) => {
-    const newCost: FixedCost = {
+    // Show input for this specific expense
+    setQuickExpenseInput({
       name: quickCost.name,
-      amount: quickCost.amount,
       category: quickCost.category
-    };
-    setFixedCosts(prev => [...prev, newCost]);
+    });
+    setCustomAmount('');
+  };
+
+  const confirmQuickCost = () => {
+    if (quickExpenseInput && customAmount && parseFloat(customAmount) > 0) {
+      const newCost: FixedCost = {
+        name: quickExpenseInput.name,
+        amount: parseFloat(customAmount),
+        category: quickExpenseInput.category
+      };
+      setFixedCosts(prev => [...prev, newCost]);
+      setQuickExpenseInput(null);
+      setCustomAmount('');
+    }
+  };
+
+  const cancelQuickCost = () => {
+    setQuickExpenseInput(null);
+    setCustomAmount('');
   };
 
   const removeCost = (index: number) => {
@@ -137,7 +156,7 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
                 {cost.name}
               </div>
               <div className="text-xs text-gray-600">
-                {currencySymbol}{cost.amount}
+                Tap to add amount
               </div>
               {isAdded && (
                 <Badge className="mt-1 bg-green-600 text-white text-xs">
@@ -149,13 +168,66 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
         })}
       </motion.div>
 
+      {/* Quick Expense Amount Input */}
+      {quickExpenseInput && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="p-4 border-2 border-green-200 bg-green-50 rounded-lg space-y-3"
+        >
+          <div className="text-center">
+            <h4 className="font-semibold text-gray-900 mb-1">
+              How much do you pay for {quickExpenseInput.name}?
+            </h4>
+            <p className="text-sm text-gray-600">
+              Enter the amount you typically pay per month
+            </p>
+          </div>
+          
+          <div className="flex items-center justify-center gap-3">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">
+                {currencySymbol}
+              </span>
+              <Input
+                type="number"
+                placeholder="0"
+                value={customAmount}
+                onChange={(e) => setCustomAmount(e.target.value)}
+                className="pl-8 text-center text-lg font-semibold w-32"
+                autoFocus
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-2 justify-center">
+            <Button
+              onClick={confirmQuickCost}
+              disabled={!customAmount || parseFloat(customAmount) <= 0}
+              className="bg-green-600 hover:bg-green-700 text-white px-6"
+            >
+              Add {quickExpenseInput.name}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={cancelQuickCost}
+              className="px-4"
+            >
+              Cancel
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Custom Cost Input */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="space-y-4"
-      >
+      {!quickExpenseInput && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="space-y-4"
+        >
         {!showCustomInput ? (
           <Button
             variant="outline"
@@ -208,6 +280,7 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
           </div>
         )}
       </motion.div>
+      )}
 
       {/* Current Fixed Costs List */}
       {fixedCosts.length > 0 && (
