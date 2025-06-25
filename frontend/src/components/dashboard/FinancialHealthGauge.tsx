@@ -27,12 +27,26 @@ const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data, perso
     );
   }
 
-  const safeToSpend = data.safe_to_spend;
-  const totalBudget = safeToSpend.total_budget;
-  const totalSpent = safeToSpend.total_spent;
-  const dailySafeAmount = safeToSpend.daily_safe_amount;
-
-  const budgetUsedPercentage = (totalSpent / totalBudget) * 100;
+  // Calculate values based on data source
+  let totalBudget: number;
+  let totalSpent: number;
+  let dailySafeAmount: number;
+  let budgetUsedPercentage: number;
+  
+  if (usePersonalized) {
+    // Use personalized calculations
+    totalBudget = personalizedData!.totalBudget;
+    totalSpent = personalizedData!.totalFixedCosts; // For now, just show fixed costs as "spent"
+    dailySafeAmount = personalizedData!.dailySafeAmount;
+    budgetUsedPercentage = (totalSpent / totalBudget) * 100;
+  } else {
+    // Use API data
+    const safeToSpendData = data!.safe_to_spend;
+    totalBudget = safeToSpendData.total_budget;
+    totalSpent = safeToSpendData.total_spent;
+    dailySafeAmount = safeToSpendData.daily_safe_amount;
+    budgetUsedPercentage = (totalSpent / totalBudget) * 100;
+  }
   
   // Determine health status
   const getHealthStatus = () => {
@@ -159,13 +173,13 @@ const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data, perso
         >
           <div className="text-center p-3 bg-white/50 rounded-lg border border-green-100/50">
             <div className="text-xl font-bold text-green-600">
-              ${safeToSpend.discretionary_remaining.toFixed(0)}
+              {currencySymbol}{usePersonalized ? (totalBudget - totalSpent).toFixed(0) : data!.safe_to_spend.discretionary_remaining.toFixed(0)}
             </div>
             <div className="text-sm text-gray-600 font-medium">Safe to Spend</div>
           </div>
           <div className="text-center p-3 bg-white/50 rounded-lg border border-blue-100/50">
             <div className="text-xl font-bold text-blue-600">
-              ${dailySafeAmount.toFixed(0)}
+              {currencySymbol}{dailySafeAmount.toFixed(0)}
             </div>
             <div className="text-sm text-gray-600 font-medium">Per Day</div>
           </div>
@@ -201,8 +215,8 @@ const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data, perso
             </div>
             <p className="text-xs text-gray-600">
               {budgetUsedPercentage <= 100 
-                ? `🎯 On track to save $${(totalBudget - totalSpent).toFixed(0)} this month!`
-                : `🚨 Projected to exceed budget by $${(totalSpent - totalBudget).toFixed(0)}.`
+                ? `🎯 On track to save ${currencySymbol}${(totalBudget - totalSpent).toFixed(0)} this month!`
+                : `🚨 Projected to exceed budget by ${currencySymbol}${(totalSpent - totalBudget).toFixed(0)}.`
               }
             </p>
           </div>

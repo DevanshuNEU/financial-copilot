@@ -29,7 +29,12 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data, personalizedDat
   }
 
   // Calculate values based on data source
-  let safeToSpend, totalBudget, totalSpent, dailySafeAmount, daysLeft, budgetUsedPercentage, remainingBudget;
+  let totalBudget: number;
+  let totalSpent: number;
+  let dailySafeAmount: number;
+  let daysLeft: number;
+  let budgetUsedPercentage: number;
+  let remainingBudget: number;
   
   if (usePersonalized) {
     // Use personalized calculations

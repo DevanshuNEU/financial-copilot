@@ -103,7 +103,7 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [justCompletedOnboarding]); // Add justCompletedOnboarding as dependency
 
   if (loading) {
     return (
