@@ -11,6 +11,7 @@ import {
   ExpensesPage, 
   SettingsPage 
 } from './pages';
+import OnboardingPage from './pages/OnboardingPage';
 import './App.css';
 
 function App() {
@@ -20,6 +21,9 @@ function App() {
       <Routes>
         {/* Beautiful Landing Page - No Navigation */}
         <Route path="/" element={<LandingPage />} />
+        
+        {/* Student Onboarding - No Navigation */}
+        <Route path="/onboarding" element={<OnboardingPage />} />
         
         {/* App Pages - With Navigation */}
         <Route path="/dashboard" element={
