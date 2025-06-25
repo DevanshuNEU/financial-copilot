@@ -6,7 +6,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,13 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { Expense } from '../../types';
 import toast from 'react-hot-toast';
 
 interface AddExpenseModalProps {
   onExpenseAdded: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface FormData {
@@ -51,9 +52,17 @@ const CATEGORIES = [
   { value: 'other', label: 'Other' },
 ];
 
-const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onExpenseAdded }) => {
-  const [open, setOpen] = useState(false);
+const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ 
+  onExpenseAdded, 
+  open: externalOpen, 
+  onOpenChange: externalOnOpenChange 
+}) => {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Use external state if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange || setInternalOpen;
   const [formData, setFormData] = useState<FormData>({
     amount: '',
     category: '',
@@ -150,12 +159,6 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onExpenseAdded }) => 
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Expense
-        </Button>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] mx-4 max-w-[calc(100vw-2rem)]">
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
