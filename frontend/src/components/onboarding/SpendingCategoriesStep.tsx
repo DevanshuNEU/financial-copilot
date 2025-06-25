@@ -19,35 +19,30 @@ const defaultCategories = [
   {
     id: 'food',
     name: 'Food & Dining',
-    icon: '🍕',
     description: 'Groceries, restaurants, coffee, snacks',
     color: 'bg-orange-500'
   },
   {
     id: 'transportation',
     name: 'Transportation',
-    icon: '🚗',
     description: 'Uber, gas, bus passes, flights home',
     color: 'bg-blue-500'
   },
   {
     id: 'textbooks',
     name: 'Textbooks & Supplies',
-    icon: '📚',
     description: 'Course materials, stationery, software',
     color: 'bg-purple-500'
   },
   {
     id: 'entertainment',
     name: 'Entertainment & Social',
-    icon: '🎬',
     description: 'Movies, concerts, going out, dates',
     color: 'bg-pink-500'
   },
   {
     id: 'other',
     name: 'Everything Else',
-    icon: '💰',
     description: 'Shopping, personal care, miscellaneous',
     color: 'bg-green-500'
   }
@@ -92,14 +87,23 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
   };
 
   const autoBalance = () => {
-    const activeCategories = defaultCategories.filter(cat => categories[cat.id] > 0);
-    if (activeCategories.length === 0) return;
-
-    const amountPerCategory = Math.floor(availableForSpending / activeCategories.length);
-    const newCategories: Record<string, number> = { ...categories };
+    // If no categories have values yet, use all categories
+    // If some have values, only redistribute among those
+    const hasAnyCategories = Object.keys(categories).length > 0;
+    const activeCategories = hasAnyCategories 
+      ? defaultCategories.filter(cat => categories[cat.id] > 0)
+      : defaultCategories;
     
-    activeCategories.forEach(category => {
-      newCategories[category.id] = amountPerCategory;
+    // If we still have no categories to work with, use all categories
+    const categoriesToUse = activeCategories.length > 0 ? activeCategories : defaultCategories;
+
+    const amountPerCategory = Math.floor(availableForSpending / categoriesToUse.length);
+    const remainder = availableForSpending % categoriesToUse.length;
+    const newCategories: Record<string, number> = {};
+    
+    categoriesToUse.forEach((category, index) => {
+      // Give remainder to first few categories to ensure exact allocation
+      newCategories[category.id] = amountPerCategory + (index < remainder ? 1 : 0);
     });
 
     setCategories(newCategories);
@@ -119,11 +123,11 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
         transition={{ delay: 0.1 }}
         className="text-center"
       >
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          🎯 How do you want to spend your money?
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+          How do you want to spend your money?
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Choose the categories that matter to you. You can always adjust these later!
+        <p className="text-gray-600 mb-4">
+          Choose the categories that matter to you. You can always adjust these later.
         </p>
         
         {/* Budget Overview */}
@@ -162,7 +166,9 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
           >
             <div className="flex items-center gap-3 mb-3">
               <div className={`w-10 h-10 ${category.color} rounded-lg flex items-center justify-center`}>
-                <span className="text-lg">{category.icon}</span>
+                <span className="text-white font-bold text-lg">
+                  {category.name.charAt(0)}
+                </span>
               </div>
               <div className="flex-1">
                 <div className="font-semibold text-gray-900">{category.name}</div>
@@ -225,13 +231,13 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
           {remaining > 0 && (
             <div className="text-center p-3 bg-blue-50 rounded-lg">
               <div className="text-sm font-medium text-blue-800 mb-1">
-                💰 Potential Monthly Savings
+                Potential Monthly Savings
               </div>
               <div className="text-2xl font-bold text-blue-600 mb-1">
                 {currencySymbol}{potentialSavings}
               </div>
               <div className="text-xs text-blue-600">
-                That's {currencySymbol}{(potentialSavings * 12).toLocaleString()} per year! 🎉
+                That's {currencySymbol}{(potentialSavings * 12).toLocaleString()} per year
               </div>
             </div>
           )}
@@ -239,7 +245,7 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
           {remaining === 0 && (
             <div className="text-center p-3 bg-green-50 rounded-lg">
               <div className="text-sm font-medium text-green-800">
-                🎯 Perfect! Your budget is fully planned
+                Perfect! Your budget is fully planned
               </div>
             </div>
           )}
@@ -247,7 +253,7 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
           {remaining < 0 && (
             <div className="text-center p-3 bg-red-50 rounded-lg">
               <div className="text-sm font-medium text-red-800 mb-1">
-                ⚠️ Over budget by {currencySymbol}{Math.abs(remaining)}
+                Over budget by {currencySymbol}{Math.abs(remaining)}
               </div>
               <div className="text-xs text-red-600">
                 Try reducing some categories or use auto-balance
@@ -264,27 +270,18 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
         transition={{ delay: 0.8 }}
         className="space-y-4"
       >
-        {/* Auto-balance only if there are categories with values */}
-        {Object.keys(categories).length > 0 && Math.abs(remaining) > 10 && (
-          <Button
-            variant="outline"
-            onClick={autoBalance}
-            className="w-full"
-          >
-            ⚡ Auto-balance selected categories
-          </Button>
-        )}
-        
+        {/* Always show auto-allocate option */}
         <Button
-          onClick={completeSetup}
-          className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-4"
+          variant="outline"
+          onClick={autoBalance}
+          className="w-full border-2 border-green-300 hover:border-green-400 hover:bg-green-50"
         >
-          🎉 Complete Setup
+          Auto-Allocate Money
         </Button>
 
         <div className="text-center">
           <p className="text-xs text-gray-500">
-            🎓 Built by students, for students. You can customize everything in your dashboard!
+            Built by students, for students. You can customize everything in your dashboard.
           </p>
         </div>
       </motion.div>
@@ -298,7 +295,7 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
           className="p-3 bg-green-50 border border-green-200 rounded-lg text-center"
         >
           <div className="text-sm text-green-800">
-            🍕 <strong>Pro tip:</strong> Since you have a meal plan, you might spend less on food & dining!
+            <strong>Pro tip:</strong> Since you have a meal plan, you might spend less on food & dining.
           </div>
         </motion.div>
       )}
