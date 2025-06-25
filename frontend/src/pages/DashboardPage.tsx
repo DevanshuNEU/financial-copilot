@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
@@ -11,8 +11,6 @@ import AddExpenseModal from '../components/dashboard/AddExpenseModal';
 import { 
   BarChart3, 
   Receipt, 
-  PiggyBank, 
-  TrendingUp, 
   Plus,
   ArrowRight,
   DollarSign,
@@ -50,6 +48,7 @@ const DashboardPage: React.FC = () => {
   const [safeToSpendData, setSafeToSpendData] = useState<SafeToSpendResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -127,7 +126,7 @@ const DashboardPage: React.FC = () => {
       description: "Track a new purchase",
       icon: Plus,
       color: "bg-blue-500",
-      action: () => document.getElementById('add-expense-trigger')?.click()
+      action: () => setShowAddExpenseModal(true)
     },
     {
       title: "View Analytics", 
@@ -146,13 +145,13 @@ const DashboardPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50">
-      {/* Welcome Header */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50/50">
+      {/* Clean Welcome Header */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="bg-white/80 backdrop-blur-sm border-b border-gray-200"
+        className="bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
@@ -185,7 +184,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Main Content */}
+      {/* Main Content with clean spacing */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div
           variants={containerVariants}
@@ -193,47 +192,57 @@ const DashboardPage: React.FC = () => {
           animate="visible"
           className="space-y-8"
         >
-          {/* Primary Cards Row */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Safe to Spend - Enhanced */}
-            <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-              <CardContent className="p-0">
+          {/* Primary Cards Row - Perfect Symmetry */}
+          <motion.div 
+            variants={itemVariants} 
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+          >
+            {/* Safe to Spend - Clean and Minimal */}
+            <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
+              <CardContent className="p-0 h-full">
                 <SafeToSpendCard data={safeToSpendData} />
               </CardContent>
             </Card>
 
-            {/* Financial Health - Enhanced */}
-            <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-              <CardContent className="p-0">
+            {/* Financial Health - Matching Height */}
+            <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
+              <CardContent className="p-0 h-full">
                 <FinancialHealthGauge data={safeToSpendData} />
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Quick Actions */}
+          {/* Quick Actions - Clean and Minimal */}
           <motion.div variants={itemVariants}>
-            <div className="text-center mb-6">
+            <motion.div 
+              className="text-center mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Quick Actions</h2>
               <p className="text-gray-600">Manage your finances with one click</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {quickActions.map((action, index) => {
                 const IconComponent = action.icon;
                 return (
                   <motion.div
                     key={index}
-                    variants={itemVariants}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 + index * 0.1 }}
                     className="cursor-pointer"
                     onClick={action.action}
                   >
-                    <Card className="border-2 border-gray-200 hover:border-green-300 transition-all duration-200 hover:shadow-lg">
+                    <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-all duration-200 group">
                       <CardContent className="p-6 text-center">
-                        <div className={`${action.color} w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3`}>
+                        <div className={`${action.color} w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:shadow-md transition-shadow`}>
                           <IconComponent className="h-6 w-6 text-white" />
                         </div>
-                        <h3 className="font-semibold text-gray-900 mb-1">{action.title}</h3>
+                        <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-green-600 transition-colors">
+                          {action.title}
+                        </h3>
                         <p className="text-sm text-gray-600">{action.description}</p>
                       </CardContent>
                     </Card>
@@ -243,51 +252,72 @@ const DashboardPage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Navigation Cards */}
+          {/* Navigation Cards - Matching Quick Actions Style */}
           <motion.div variants={itemVariants}>
-            <div className="text-center mb-6">
+            <motion.div 
+              className="text-center mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Explore More</h2>
               <p className="text-gray-600">Dive deeper into your financial data</p>
-            </div>
+            </motion.div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="cursor-pointer"
+                onClick={() => navigate('/analytics')}
               >
-                <Card 
-                  className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-white hover:shadow-xl transition-all duration-300 cursor-pointer group"
-                  onClick={() => navigate('/analytics')}
-                >
+                <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-all duration-200 group">
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                         <BarChart3 className="h-6 w-6 text-white" />
                       </div>
-                      <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
+                            Analytics & Insights
+                          </h3>
+                          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all duration-200" />
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Understand your spending patterns with beautiful charts and detailed analysis.
+                        </p>
+                      </div>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Analytics & Insights</h3>
-                    <p className="text-gray-600">Understand your spending patterns with beautiful charts and detailed analysis.</p>
                   </CardContent>
                 </Card>
               </motion.div>
 
               <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="cursor-pointer"
+                onClick={() => navigate('/expenses')}
               >
-                <Card 
-                  className="border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-white hover:shadow-xl transition-all duration-300 cursor-pointer group"
-                  onClick={() => navigate('/expenses')}
-                >
+                <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-all duration-200 group">
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                         <Receipt className="h-6 w-6 text-white" />
                       </div>
-                      <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                            Expense Management
+                          </h3>
+                          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all duration-200" />
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          View, edit, and organize all your expenses in one convenient location.
+                        </p>
+                      </div>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Expense Management</h3>
-                    <p className="text-gray-600">View, edit, and organize all your expenses in one convenient location.</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -296,8 +326,12 @@ const DashboardPage: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Hidden Add Expense Modal Trigger */}
-      <AddExpenseModal onExpenseAdded={fetchData} />
+      {/* Add Expense Modal - Controlled */}
+      <AddExpenseModal 
+        onExpenseAdded={fetchData} 
+        open={showAddExpenseModal}
+        onOpenChange={setShowAddExpenseModal}
+      />
     </div>
   );
 };
