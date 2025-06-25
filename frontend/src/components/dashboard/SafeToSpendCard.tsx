@@ -2,14 +2,21 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { SafeToSpendResponse } from '../../types';
+import { OnboardingData, PersonalizedSafeToSpend, onboardingService } from '../../services/onboarding';
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface SafeToSpendCardProps {
   data: SafeToSpendResponse | null;
+  personalizedData?: PersonalizedSafeToSpend | null;
+  onboardingData?: OnboardingData | null;
 }
 
-const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
-  if (!data) {
+const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data, personalizedData, onboardingData }) => {
+  // Use personalized data if available, otherwise fall back to API data
+  const usePersonalized = personalizedData && onboardingData;
+  const currencySymbol = onboardingData ? onboardingService.getCurrencySymbol(onboardingData.currency) : '$';
+  
+  if (!data && !usePersonalized) {
     return (
       <div className="p-8 h-full flex items-center justify-center">
         <div className="animate-pulse space-y-4 w-full">
@@ -21,10 +28,29 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
     );
   }
 
-  const safeToSpend = data.safe_to_spend;
-  const isOverBudget = safeToSpend.total_spent > safeToSpend.total_budget;
-  const remainingBudget = safeToSpend.total_budget - safeToSpend.total_spent;
-  const budgetUsedPercentage = (safeToSpend.total_spent / safeToSpend.total_budget) * 100;
+  // Calculate values based on data source
+  let safeToSpend, totalBudget, totalSpent, dailySafeAmount, daysLeft, budgetUsedPercentage, remainingBudget;
+  
+  if (usePersonalized) {
+    // Use personalized calculations
+    totalBudget = personalizedData!.totalBudget;
+    totalSpent = personalizedData!.totalFixedCosts; // For now, just show fixed costs as "spent"
+    remainingBudget = personalizedData!.availableForSpending;
+    dailySafeAmount = personalizedData!.dailySafeAmount;
+    daysLeft = personalizedData!.daysLeftInMonth;
+    budgetUsedPercentage = (totalSpent / totalBudget) * 100;
+  } else {
+    // Use API data
+    const safeToSpendData = data!.safe_to_spend;
+    totalBudget = safeToSpendData.total_budget;
+    totalSpent = safeToSpendData.total_spent;
+    remainingBudget = safeToSpendData.total_budget - safeToSpendData.total_spent;
+    dailySafeAmount = safeToSpendData.daily_safe_amount;
+    daysLeft = safeToSpendData.days_left_in_month;
+    budgetUsedPercentage = (safeToSpendData.total_spent / safeToSpendData.total_budget) * 100;
+  }
+
+  const isOverBudget = totalSpent > totalBudget;
 
   // Determine status and color
   const getStatusInfo = () => {
@@ -107,11 +133,23 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
           className="text-center mb-6"
         >
           <div className={`text-4xl font-bold ${statusInfo.color} mb-2`}>
-            ${Math.max(0, remainingBudget).toFixed(2)}
+            {currencySymbol}{Math.max(0, remainingBudget).toFixed(2)}
           </div>
           <p className="text-gray-600 text-sm">
-            {isOverBudget ? '⚠️ Over budget this month' : '🎉 Available for fun stuff'}
+            {usePersonalized 
+              ? isOverBudget 
+                ? '⚠️ Budget tight - watch spending' 
+                : '🎉 Available for fun stuff'
+              : isOverBudget 
+                ? '⚠️ Over budget this month' 
+                : '🎉 Available for fun stuff'
+            }
           </p>
+          {usePersonalized && onboardingData?.hasMealPlan && (
+            <p className="text-xs text-green-600 mt-1">
+              🍕 Meal plan helping keep food costs down!
+            </p>
+          )}
         </motion.div>
 
         {/* Daily Breakdown - Simplified */}
@@ -121,12 +159,14 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
           transition={{ delay: 0.4, duration: 0.5 }}
           className="text-center mb-6 p-4 bg-white/50 rounded-lg border border-gray-100/50"
         >
-          <p className="text-sm text-gray-600 mb-1 font-medium">Today you can spend</p>
+          <p className="text-sm text-gray-600 mb-1 font-medium">
+            {usePersonalized ? 'You can spend today' : 'Today you can spend'}
+          </p>
           <div className="text-2xl font-bold text-blue-600">
-            ${safeToSpend.daily_safe_amount.toFixed(2)}
+            {currencySymbol}{dailySafeAmount.toFixed(2)}
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Based on {safeToSpend.days_left_in_month} days remaining
+            Based on {daysLeft} days remaining
           </p>
         </motion.div>
 
@@ -138,13 +178,17 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data }) => {
           className="grid grid-cols-2 gap-4 mb-6"
         >
           <div className="text-center p-3 bg-gray-50/50 rounded-lg">
-            <p className="text-sm text-gray-600 font-medium">Total Budget</p>
-            <p className="font-bold text-gray-900">${safeToSpend.total_budget.toFixed(2)}</p>
+            <p className="text-sm text-gray-600 font-medium">
+              {usePersonalized ? 'Monthly Budget' : 'Total Budget'}
+            </p>
+            <p className="font-bold text-gray-900">{currencySymbol}{totalBudget.toFixed(2)}</p>
           </div>
           <div className="text-center p-3 bg-gray-50/50 rounded-lg">
-            <p className="text-sm text-gray-600 font-medium">Total Spent</p>
+            <p className="text-sm text-gray-600 font-medium">
+              {usePersonalized ? 'Fixed Costs' : 'Total Spent'}
+            </p>
             <p className={`font-bold ${isOverBudget ? 'text-red-600' : 'text-gray-900'}`}>
-              ${safeToSpend.total_spent.toFixed(2)}
+              {currencySymbol}{totalSpent.toFixed(2)}
             </p>
           </div>
         </motion.div>

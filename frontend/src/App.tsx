@@ -12,6 +12,7 @@ import {
   SettingsPage 
 } from './pages';
 import OnboardingPage from './pages/OnboardingPage';
+import OnboardingDebugPage from './pages/OnboardingDebugPage';
 import './App.css';
 
 function App() {
@@ -24,6 +25,9 @@ function App() {
         
         {/* Student Onboarding - No Navigation */}
         <Route path="/onboarding" element={<OnboardingPage />} />
+        
+        {/* Debug Page - No Navigation */}
+        <Route path="/debug" element={<OnboardingDebugPage />} />
         
         {/* App Pages - With Navigation */}
         <Route path="/dashboard" element={

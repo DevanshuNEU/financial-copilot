@@ -2,13 +2,20 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Target } from 'lucide-react';
 import { SafeToSpendResponse } from '../../types';
+import { OnboardingData, PersonalizedSafeToSpend, onboardingService } from '../../services/onboarding';
 
 interface FinancialHealthGaugeProps {
   data?: SafeToSpendResponse | null;
+  personalizedData?: PersonalizedSafeToSpend | null;
+  onboardingData?: OnboardingData | null;
 }
 
-const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data }) => {
-  if (!data) {
+const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data, personalizedData, onboardingData }) => {
+  // Use personalized data if available, otherwise fall back to API data
+  const usePersonalized = personalizedData && onboardingData;
+  const currencySymbol = onboardingData ? onboardingService.getCurrencySymbol(onboardingData.currency) : '$';
+  
+  if (!data && !usePersonalized) {
     return (
       <div className="p-8 h-full flex items-center justify-center">
         <div className="animate-pulse space-y-4 w-full">

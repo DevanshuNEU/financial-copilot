@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { apiService } from '../services/api';
+import { onboardingService, OnboardingData, PersonalizedSafeToSpend } from '../services/onboarding';
 import { SafeToSpendResponse } from '../types';
 import SafeToSpendCard from '../components/dashboard/SafeToSpendCard';
 import FinancialHealthGauge from '../components/dashboard/FinancialHealthGauge';
@@ -15,7 +16,9 @@ import {
   ArrowRight,
   DollarSign,
   Target,
-  Zap
+  Zap,
+  Sparkles,
+  Heart
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -45,21 +48,54 @@ const itemVariants: Variants = {
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [safeToSpendData, setSafeToSpendData] = useState<SafeToSpendResponse | null>(null);
+  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
+  const [personalizedData, setPersonalizedData] = useState<PersonalizedSafeToSpend | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
+
+  // Check if user just completed onboarding
+  const justCompletedOnboarding = location.state?.onboardingComplete === true;
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      
+      // Load onboarding data first
+      const hasCompleted = onboardingService.hasCompletedOnboarding();
+      const userData = onboardingService.getOnboardingData();
+      
+      if (hasCompleted && userData) {
+        setOnboardingData(userData);
+        setPersonalizedData(onboardingService.calculatePersonalizedSafeToSpend(userData));
+        setIsNewUser(justCompletedOnboarding);
+        
+        // Show celebration toast for new users
+        if (justCompletedOnboarding) {
+          toast.success(
+            `🎉 Welcome to your personalized dashboard! Your ${onboardingService.getCurrencySymbol(userData.currency)}${userData.monthlyBudget} budget is all set up.`,
+            { duration: 5000 }
+          );
+        }
+      }
+      
+      // Still fetch backend data for comparison/fallback
       const safeToSpendResponse = await apiService.getSafeToSpend();
       setSafeToSpendData(safeToSpendResponse);
       setError(null);
     } catch (err) {
       setError('Failed to load data. Make sure the backend is running on port 5002.');
       console.error('Dashboard fetch error:', err);
-      toast.error('Failed to load dashboard data');
+      
+      // If we have onboarding data, still show personalized view even if backend fails
+      if (onboardingData || onboardingService.hasCompletedOnboarding()) {
+        toast.error('Backend connection failed, but showing your personalized data');
+      } else {
+        toast.error('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
     }
@@ -144,9 +180,20 @@ const DashboardPage: React.FC = () => {
     }
   ];
 
+  // Add onboarding prompt for users who haven't completed setup
+  if (!onboardingData && !onboardingService.hasSkippedOnboarding()) {
+    quickActions.unshift({
+      title: "Complete Setup",
+      description: "Get personalized dashboard in 2 minutes!",
+      icon: Sparkles,
+      color: "bg-gradient-to-r from-green-500 to-blue-500",
+      action: () => navigate('/onboarding')
+    });
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50/50">
-      {/* Clean Welcome Header */}
+      {/* Clean Welcome Header - Personalized */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -155,31 +202,79 @@ const DashboardPage: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-4"
-            >
-              <DollarSign className="h-4 w-4" />
-              Welcome back! 👋
-            </motion.div>
+            {/* Celebration badge for new users */}
+            {isNewUser && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 px-6 py-3 rounded-full text-sm font-medium mb-4 shadow-sm"
+              >
+                <Sparkles className="h-4 w-4" />
+                🎉 Setup Complete! Your personalized dashboard is ready!
+                <Heart className="h-4 w-4 text-red-500" />
+              </motion.div>
+            )}
+            
+            {/* Regular welcome badge */}
+            {!isNewUser && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-4"
+              >
+                <DollarSign className="h-4 w-4" />
+                {onboardingData ? '👋 Welcome back!' : 'Welcome! 👋'}
+              </motion.div>
+            )}
+            
+            {/* Personalized welcome message */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.6 }}
               className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2"
             >
-              Here's your quick financial health check
+              {onboardingData 
+                ? onboardingService.getWelcomeMessage(onboardingData)
+                : "Here's your quick financial health check"
+              }
             </motion.h1>
+            
+            {/* Personalized subtitle */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7, duration: 0.6 }}
               className="text-gray-600 text-lg"
             >
-              Stay on track with your spending goals
+              {onboardingData 
+                ? personalizedData 
+                  ? `You can safely spend ${onboardingService.getCurrencySymbol(onboardingData.currency)}${personalizedData.dailySafeAmount.toFixed(0)} per day this month!`
+                  : "Based on your personal budget setup"
+                : "Stay on track with your spending goals"
+              }
             </motion.p>
+            
+            {/* Personalized insights for new users */}
+            {isNewUser && onboardingData && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9, duration: 0.6 }}
+                className="mt-4 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto"
+              >
+                {onboardingService.getPersonalizedInsights(onboardingData).map((insight, index) => (
+                  <span 
+                    key={index}
+                    className="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full"
+                  >
+                    {insight}
+                  </span>
+                ))}
+              </motion.div>
+            )}
           </div>
         </div>
       </motion.div>
@@ -200,14 +295,22 @@ const DashboardPage: React.FC = () => {
             {/* Safe to Spend - Clean and Minimal */}
             <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
               <CardContent className="p-0 h-full">
-                <SafeToSpendCard data={safeToSpendData} />
+                <SafeToSpendCard 
+                  data={safeToSpendData} 
+                  personalizedData={personalizedData}
+                  onboardingData={onboardingData}
+                />
               </CardContent>
             </Card>
 
             {/* Financial Health - Matching Height */}
             <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
               <CardContent className="p-0 h-full">
-                <FinancialHealthGauge data={safeToSpendData} />
+                <FinancialHealthGauge 
+                  data={safeToSpendData}
+                  personalizedData={personalizedData}
+                  onboardingData={onboardingData}
+                />
               </CardContent>
             </Card>
           </motion.div>
@@ -237,13 +340,15 @@ const DashboardPage: React.FC = () => {
                   >
                     <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-all duration-200 group">
                       <CardContent className="p-6 text-center">
-                        <div className={`${action.color} w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:shadow-md transition-shadow`}>
+                        <div className={`${action.color} w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:shadow-md transition-shadow ${action.title === 'Complete Setup' ? 'text-white' : ''}`}>
                           <IconComponent className="h-6 w-6 text-white" />
                         </div>
-                        <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-green-600 transition-colors">
+                        <h3 className={`font-semibold mb-1 group-hover:text-green-600 transition-colors ${action.title === 'Complete Setup' ? 'text-green-700 font-bold' : 'text-gray-900'}`}>
                           {action.title}
                         </h3>
-                        <p className="text-sm text-gray-600">{action.description}</p>
+                        <p className={`text-sm ${action.title === 'Complete Setup' ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                          {action.description}
+                        </p>
                       </CardContent>
                     </Card>
                   </motion.div>
