@@ -114,11 +114,11 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
         transition={{ delay: 0.1 }}
         className="text-center"
       >
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          🏠 What do you pay for every month?
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+          What do you pay for every month?
         </h3>
-        <p className="text-sm text-gray-600">
-          Tap the ones that apply to you. Don't worry, you can change these anytime!
+        <p className="text-gray-600">
+          Tap the ones that apply to you. Don't worry, you can change these anytime.
         </p>
       </motion.div>
 
@@ -339,7 +339,7 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
         className="p-4 bg-green-50 rounded-lg border border-green-200"
       >
         <div className="text-center">
-          <div className="text-sm text-gray-600 mb-1">After fixed costs:</div>
+          <div className="text-sm text-gray-600 mb-1 font-medium">After fixed costs:</div>
           <div className="text-2xl font-bold text-green-600">
             {currencySymbol}{remainingBudget.toFixed(2)} available
           </div>
@@ -347,31 +347,6 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
             Fixed costs: {currencySymbol}{totalFixedCosts.toFixed(2)} / Monthly budget: {currencySymbol}{data.monthlyBudget}
           </div>
         </div>
-      </motion.div>
-
-      {/* Continue Button */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="space-y-3"
-      >
-        <Button
-          onClick={continueToNext}
-          className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-3"
-        >
-          Continue to Spending Categories →
-        </Button>
-        
-        {fixedCosts.length === 0 && (
-          <Button
-            variant="ghost"
-            onClick={continueToNext}
-            className="w-full text-gray-600 hover:text-gray-800"
-          >
-            Skip this step - I'll add them later
-          </Button>
-        )}
       </motion.div>
     </div>
   );
