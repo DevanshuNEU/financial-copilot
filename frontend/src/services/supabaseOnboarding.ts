@@ -1,0 +1,244 @@
+// Supabase-powered onboarding service for Financial Copilot
+import { supabase } from '../lib/supabase'
+import type { OnboardingData as SupabaseOnboardingData } from '../lib/supabase'
+
+// Frontend onboarding data interface (simplified)
+export interface OnboardingData {
+  monthlyBudget: number
+  currency: string
+  hasMealPlan: boolean
+  fixedCosts: Array<{ name: string; amount: number; category: string }>
+  spendingCategories: Record<string, number>
+}
+
+export interface PersonalizedSafeToSpend {
+  totalBudget: number
+  totalFixedCosts: number
+  availableForSpending: number
+  dailySafeAmount: number
+  currency: string
+  daysLeftInMonth: number
+  isPersonalized: boolean
+}
+
+class SupabaseOnboardingService {
+  /**
+   * Save onboarding data to Supabase
+   */
+  async saveOnboardingData(data: OnboardingData): Promise<SupabaseOnboardingData> {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('User must be authenticated to save onboarding data')
+    }
+
+    const onboardingRecord = {
+      user_id: user.id,
+      monthly_budget: data.monthlyBudget,
+      currency: data.currency,
+      has_meal_plan: data.hasMealPlan,
+      fixed_costs: data.fixedCosts,
+      spending_categories: data.spendingCategories,
+      is_complete: true,
+      completed_at: new Date().toISOString()
+    }
+
+    const { data: savedData, error } = await supabase
+      .from('onboarding_data')
+      .upsert(onboardingRecord)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(`Failed to save onboarding data: ${error.message}`)
+    }
+
+    return savedData
+  }
+
+  /**
+   * Load onboarding data from Supabase
+   */
+  async loadOnboardingData(): Promise<OnboardingData | null> {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return null
+    }
+
+    const { data, error } = await supabase
+      .from('onboarding_data')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Failed to load onboarding data:', error)
+      return null
+    }
+
+    if (!data) {
+      return null
+    }
+
+    // Convert Supabase format to frontend format
+    return {
+      monthlyBudget: Number(data.monthly_budget),
+      currency: data.currency,
+      hasMealPlan: data.has_meal_plan,
+      fixedCosts: data.fixed_costs || [],
+      spendingCategories: data.spending_categories || {}
+    }
+  }
+
+  /**
+   * Check if user has completed onboarding
+   */
+  async hasCompletedOnboarding(): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return false
+    }
+
+    const { data, error } = await supabase
+      .from('onboarding_data')
+      .select('is_complete')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Failed to check onboarding status:', error)
+      return false
+    }
+
+    return data?.is_complete || false
+  }
+
+  /**
+   * Clear onboarding data
+   */
+  async clearOnboardingData(): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return
+    }
+
+    const { error } = await supabase
+      .from('onboarding_data')
+      .delete()
+      .eq('user_id', user.id)
+
+    if (error) {
+      throw new Error(`Failed to clear onboarding data: ${error.message}`)
+    }
+  }
+
+  /**
+   * Calculate personalized safe to spend
+   */
+  calculatePersonalizedSafeToSpend(data: OnboardingData): PersonalizedSafeToSpend {
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    
+    // Calculate days left in current month
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+    const currentDay = now.getDate()
+    const daysLeftInMonth = Math.max(1, lastDayOfMonth - currentDay + 1)
+
+    // Calculate total fixed costs
+    const totalFixedCosts = data.fixedCosts.reduce((sum, cost) => sum + cost.amount, 0)
+    
+    // Available for spending (after fixed costs)
+    const availableForSpending = data.monthlyBudget - totalFixedCosts
+    
+    // Daily safe amount based on remaining days
+    const dailySafeAmount = Math.max(0, availableForSpending / daysLeftInMonth)
+
+    return {
+      totalBudget: data.monthlyBudget,
+      totalFixedCosts,
+      availableForSpending: Math.max(0, availableForSpending),
+      dailySafeAmount,
+      currency: data.currency,
+      daysLeftInMonth,
+      isPersonalized: true
+    }
+  }
+
+  /**
+   * Get currency symbol from currency code
+   */
+  getCurrencySymbol(currency: string): string {
+    const currencyMap: Record<string, string> = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'CAD': 'C$',
+      'AUD': 'A$',
+      'JPY': '¥',
+      'CHF': 'CHF ',
+      'CNY': '¥',
+      'INR': '₹'
+    }
+
+    return currencyMap[currency] || currency + ' '
+  }
+
+  /**
+   * Get personalized welcome message
+   */
+  getWelcomeMessage(data: OnboardingData): string {
+    const currencySymbol = this.getCurrencySymbol(data.currency)
+    const totalFixedCosts = data.fixedCosts.reduce((sum, cost) => sum + cost.amount, 0)
+    const availableForSpending = data.monthlyBudget - totalFixedCosts
+    
+    if (data.hasMealPlan) {
+      return `Welcome back! Your ${currencySymbol}${data.monthlyBudget} budget with meal plan gives you ${currencySymbol}${availableForSpending.toFixed(0)} for fun stuff!`
+    } else {
+      return `Welcome back! You've got ${currencySymbol}${availableForSpending.toFixed(0)} available from your ${currencySymbol}${data.monthlyBudget} monthly budget!`
+    }
+  }
+
+  /**
+   * Get personalized insights
+   */
+  getPersonalizedInsights(data: OnboardingData): string[] {
+    const insights: string[] = []
+    const currencySymbol = this.getCurrencySymbol(data.currency)
+    
+    // Meal plan insight
+    if (data.hasMealPlan) {
+      const mealPlanCost = data.fixedCosts.find(cost => 
+        cost.name.toLowerCase().includes('meal') || cost.category === 'food'
+      )
+      if (mealPlanCost) {
+        insights.push(`Your ${currencySymbol}${mealPlanCost.amount} meal plan is saving you money on food!`)
+      } else {
+        insights.push(`Your meal plan helps keep food costs predictable!`)
+      }
+    }
+
+    // Budget level insight
+    if (data.monthlyBudget <= 1000) {
+      insights.push(`Managing on a tight budget? You're building great financial habits!`)
+    } else if (data.monthlyBudget >= 1500) {
+      insights.push(`With your flexible budget, you have room for both needs and wants!`)
+    } else {
+      insights.push(`Your balanced budget gives you comfort and flexibility!`)
+    }
+
+    // Spending category insights
+    const categories = data.spendingCategories
+    const entertainmentBudget = categories['Entertainment'] || categories['entertainment'] || 0
+    if (entertainmentBudget > 0) {
+      insights.push(`${currencySymbol}${entertainmentBudget} for entertainment - perfect for student life!`)
+    }
+
+    return insights.slice(0, 3)
+  }
+}
+
+export const supabaseOnboardingService = new SupabaseOnboardingService()

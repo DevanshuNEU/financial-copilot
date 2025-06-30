@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Target } from 'lucide-react';
 import { SafeToSpendResponse } from '../../types';
-import { OnboardingData, PersonalizedSafeToSpend, onboardingService } from '../../services/onboarding';
+import { OnboardingData, PersonalizedSafeToSpend, supabaseOnboardingService } from '../../services/supabaseOnboarding';
 
 interface FinancialHealthGaugeProps {
   data?: SafeToSpendResponse | null;
@@ -13,7 +13,7 @@ interface FinancialHealthGaugeProps {
 const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data, personalizedData, onboardingData }) => {
   // Use personalized data if available, otherwise fall back to API data
   const usePersonalized = personalizedData && onboardingData;
-  const currencySymbol = onboardingData ? onboardingService.getCurrencySymbol(onboardingData.currency) : '$';
+  const currencySymbol = onboardingData ? supabaseOnboardingService.getCurrencySymbol(onboardingData.currency) : '$';
   
   if (!data && !usePersonalized) {
     return (

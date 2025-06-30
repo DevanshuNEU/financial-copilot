@@ -36,6 +36,7 @@ def seed_db():
         created_date = datetime.utcnow() - timedelta(days=random.randint(0, 30))
         
         expense = Expense(
+            user_id=1,  # Default to user ID 1 for sample data
             amount=exp_data["amount"],
             category=exp_data["category"],
             description=exp_data["description"],
@@ -59,4 +60,12 @@ def handle_disconnect():
     print('Client disconnected')
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    # Use port 5002 to match frontend configuration
+    # Allow unsafe werkzeug for development
+    socketio.run(
+        app, 
+        debug=True, 
+        host='0.0.0.0', 
+        port=5002, 
+        allow_unsafe_werkzeug=True
+    )

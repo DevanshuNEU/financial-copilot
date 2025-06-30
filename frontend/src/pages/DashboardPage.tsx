@@ -3,8 +3,9 @@ import { motion, Variants } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
 import { apiService } from '../services/api';
-import { onboardingService, OnboardingData, PersonalizedSafeToSpend } from '../services/onboarding';
+import { supabaseOnboardingService, OnboardingData, PersonalizedSafeToSpend } from '../services/supabaseOnboarding';
 import { SafeToSpendResponse } from '../types';
 import SafeToSpendCard from '../components/dashboard/SafeToSpendCard';
 import FinancialHealthGauge from '../components/dashboard/FinancialHealthGauge';
@@ -49,6 +50,7 @@ const itemVariants: Variants = {
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useSupabaseAuth();
   const [safeToSpendData, setSafeToSpendData] = useState<SafeToSpendResponse | null>(null);
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [personalizedData, setPersonalizedData] = useState<PersonalizedSafeToSpend | null>(null);
@@ -64,38 +66,37 @@ const DashboardPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load onboarding data first
-      const hasCompleted = onboardingService.hasCompletedOnboarding();
-      const userData = onboardingService.getOnboardingData();
+      // Load onboarding data from Supabase
+      const userData = await supabaseOnboardingService.loadOnboardingData();
       
-      if (hasCompleted && userData) {
+      if (userData) {
         setOnboardingData(userData);
-        setPersonalizedData(onboardingService.calculatePersonalizedSafeToSpend(userData));
+        setPersonalizedData(supabaseOnboardingService.calculatePersonalizedSafeToSpend(userData));
         setIsNewUser(justCompletedOnboarding);
         
         // Show celebration toast for new users
         if (justCompletedOnboarding) {
           toast.success(
-            `🎉 Welcome to your personalized dashboard! Your ${onboardingService.getCurrencySymbol(userData.currency)}${userData.monthlyBudget} budget is all set up.`,
+            `🎉 Welcome to your personalized dashboard! Your ${supabaseOnboardingService.getCurrencySymbol(userData.currency)}${userData.monthlyBudget} budget is all set up.`,
             { duration: 5000 }
           );
         }
       }
       
       // Still fetch backend data for comparison/fallback
-      const safeToSpendResponse = await apiService.getSafeToSpend();
-      setSafeToSpendData(safeToSpendResponse);
+      try {
+        const safeToSpendResponse = await apiService.getSafeToSpend();
+        setSafeToSpendData(safeToSpendResponse);
+      } catch (backendError) {
+        console.warn('Backend API failed, using onboarding data only:', backendError);
+        // This is okay - we can show personalized data without the backend
+      }
+      
       setError(null);
     } catch (err) {
-      setError('Failed to load data. Make sure the backend is running on port 5002.');
+      setError('Failed to load your financial data.');
       console.error('Dashboard fetch error:', err);
-      
-      // If we have onboarding data, still show personalized view even if backend fails
-      if (onboardingData || onboardingService.hasCompletedOnboarding()) {
-        toast.error('Backend connection failed, but showing your personalized data');
-      } else {
-        toast.error('Failed to load dashboard data');
-      }
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -181,7 +182,7 @@ const DashboardPage: React.FC = () => {
   ];
 
   // Add onboarding prompt for users who haven't completed setup
-  if (!onboardingData && !onboardingService.hasSkippedOnboarding()) {
+  if (!onboardingData) {
     quickActions.unshift({
       title: "Complete Setup",
       description: "Get personalized dashboard in 2 minutes!",
@@ -237,7 +238,7 @@ const DashboardPage: React.FC = () => {
               className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2"
             >
               {onboardingData 
-                ? onboardingService.getWelcomeMessage(onboardingData)
+                ? supabaseOnboardingService.getWelcomeMessage(onboardingData)
                 : "Here's your quick financial health check"
               }
             </motion.h1>
@@ -251,7 +252,7 @@ const DashboardPage: React.FC = () => {
             >
               {onboardingData 
                 ? personalizedData 
-                  ? `You can safely spend ${onboardingService.getCurrencySymbol(onboardingData.currency)}${personalizedData.dailySafeAmount.toFixed(0)} per day this month!`
+                  ? `You can safely spend ${supabaseOnboardingService.getCurrencySymbol(onboardingData.currency)}${personalizedData.dailySafeAmount.toFixed(0)} per day this month!`
                   : "Based on your personal budget setup"
                 : "Stay on track with your spending goals"
               }
@@ -265,7 +266,7 @@ const DashboardPage: React.FC = () => {
                 transition={{ delay: 0.9, duration: 0.6 }}
                 className="mt-4 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto"
               >
-                {onboardingService.getPersonalizedInsights(onboardingData).map((insight, index) => (
+                {supabaseOnboardingService.getPersonalizedInsights(onboardingData).map((insight, index) => (
                   <span 
                     key={index}
                     className="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full"

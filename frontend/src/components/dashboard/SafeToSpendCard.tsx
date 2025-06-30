@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { SafeToSpendResponse } from '../../types';
-import { OnboardingData, PersonalizedSafeToSpend, onboardingService } from '../../services/onboarding';
+import { OnboardingData, PersonalizedSafeToSpend, supabaseOnboardingService } from '../../services/supabaseOnboarding';
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface SafeToSpendCardProps {
@@ -14,7 +14,7 @@ interface SafeToSpendCardProps {
 const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data, personalizedData, onboardingData }) => {
   // Use personalized data if available, otherwise fall back to API data
   const usePersonalized = personalizedData && onboardingData;
-  const currencySymbol = onboardingData ? onboardingService.getCurrencySymbol(onboardingData.currency) : '$';
+  const currencySymbol = onboardingData ? supabaseOnboardingService.getCurrencySymbol(onboardingData.currency) : '$';
   
   if (!data && !usePersonalized) {
     return (

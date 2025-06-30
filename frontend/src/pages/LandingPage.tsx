@@ -18,11 +18,11 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/onboarding');
+    navigate('/auth');
   };
 
   const handleSignIn = () => {
-    navigate('/dashboard');
+    navigate('/auth');
   };
 
   const features = [

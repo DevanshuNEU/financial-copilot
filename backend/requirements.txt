@@ -3,6 +3,10 @@ flask-cors==5.0.0
 flask-sqlalchemy==3.1.1
 flask-migrate==4.0.5
 flask-socketio==5.3.6
+flask-jwt-extended==4.5.3
+werkzeug>=3.1
 python-dotenv==1.0.1
 redis==4.6.0
 python-socketio==5.8.0
+authlib==1.2.1
+requests==2.31.0

@@ -1,8 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
 import Navigation from './components/navigation/Navigation';
 import ScrollToTop from './components/ui/ScrollToTop';
+import SupabaseProtectedRoute from './components/auth/SupabaseProtectedRoute';
+import SupabaseAuthPage from './pages/auth/SupabaseAuthPage';
 import { 
   LandingPage,
   DashboardPage, 
@@ -17,74 +20,99 @@ import './App.css';
 
 function App() {
   return (
-    <Router>
-      <ScrollToTop />
-      <Routes>
-        {/* Beautiful Landing Page - No Navigation */}
-        <Route path="/" element={<LandingPage />} />
+    <SupabaseAuthProvider>
+      <Router>
+        <ScrollToTop />
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/auth" element={<SupabaseAuthPage />} />
+          
+          {/* Protected Routes - Authentication Required */}
+          <Route path="/onboarding" element={
+            <SupabaseProtectedRoute>
+              <OnboardingPage />
+            </SupabaseProtectedRoute>
+          } />
+          
+          {/* Protected Routes - Authentication + Onboarding Required */}
+          <Route path="/dashboard" element={
+            <SupabaseProtectedRoute requireOnboarding>
+              <div className="min-h-screen bg-gray-50">
+                <Navigation />
+                <DashboardPage />
+              </div>
+            </SupabaseProtectedRoute>
+          } />
+          
+          <Route path="/analytics" element={
+            <SupabaseProtectedRoute requireOnboarding>
+              <div className="min-h-screen bg-gray-50">
+                <Navigation />
+                <AnalyticsPage />
+              </div>
+            </SupabaseProtectedRoute>
+          } />
+          
+          <Route path="/budget" element={
+            <SupabaseProtectedRoute requireOnboarding>
+              <div className="min-h-screen bg-gray-50">
+                <Navigation />
+                <BudgetPage />
+              </div>
+            </SupabaseProtectedRoute>
+          } />
+          
+          <Route path="/expenses" element={
+            <SupabaseProtectedRoute requireOnboarding>
+              <div className="min-h-screen bg-gray-50">
+                <Navigation />
+                <ExpensesPage />
+              </div>
+            </SupabaseProtectedRoute>
+          } />
+          
+          <Route path="/settings" element={
+            <SupabaseProtectedRoute requireOnboarding>
+              <div className="min-h-screen bg-gray-50">
+                <Navigation />
+                <SettingsPage />
+              </div>
+            </SupabaseProtectedRoute>
+          } />
+          
+          {/* Debug Page - Protected but doesn't require onboarding */}
+          <Route path="/debug" element={
+            <SupabaseProtectedRoute>
+              <OnboardingDebugPage />
+            </SupabaseProtectedRoute>
+          } />
+        </Routes>
         
-        {/* Student Onboarding - No Navigation */}
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        
-        {/* Debug Page - No Navigation */}
-        <Route path="/debug" element={<OnboardingDebugPage />} />
-        
-        {/* App Pages - With Navigation */}
-        <Route path="/dashboard" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <DashboardPage />
-          </div>
-        } />
-        <Route path="/analytics" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <AnalyticsPage />
-          </div>
-        } />
-        <Route path="/budget" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <BudgetPage />
-          </div>
-        } />
-        <Route path="/expenses" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <ExpensesPage />
-          </div>
-        } />
-        <Route path="/settings" element={
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <SettingsPage />
-          </div>
-        } />
-      </Routes>
-      
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            style: {
-              background: '#10b981',
-            },
-          },
-          error: {
+        <Toaster 
+          position="top-right"
+          toastOptions={{
             duration: 4000,
             style: {
-              background: '#ef4444',
+              background: '#363636',
+              color: '#fff',
             },
-          },
-        }}
-      />
-    </Router>
+            success: {
+              duration: 3000,
+              style: {
+                background: '#10b981',
+              },
+            },
+            error: {
+              duration: 4000,
+              style: {
+                background: '#ef4444',
+              },
+            },
+          }}
+        />
+      </Router>
+    </SupabaseAuthProvider>
   );
 }
 

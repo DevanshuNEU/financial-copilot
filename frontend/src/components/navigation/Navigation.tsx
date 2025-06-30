@@ -1,16 +1,24 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useSupabaseAuth } from '../../contexts/SupabaseAuthContext';
 import { 
   Home, 
   BarChart3, 
   PiggyBank, 
   Receipt, 
   Settings,
-  DollarSign
+  DollarSign,
+  User,
+  LogOut,
+  ChevronDown
 } from 'lucide-react';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useSupabaseAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard', description: 'Quick overview' },
@@ -19,6 +27,54 @@ const Navigation: React.FC = () => {
     { path: '/expenses', icon: Receipt, label: 'Expenses', description: 'Track spending' },
     { path: '/settings', icon: Settings, label: 'Settings', description: 'App preferences' }
   ];
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/auth');
+      setShowUserMenu(false);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const getUserDisplayName = () => {
+    const firstName = user?.user_metadata?.first_name;
+    const lastName = user?.user_metadata?.last_name;
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    if (firstName) {
+      return firstName;
+    }
+    return user?.email || 'User';
+  };
+
+  const getUserInitials = () => {
+    const firstName = user?.user_metadata?.first_name;
+    const lastName = user?.user_metadata?.last_name;
+    
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    }
+    if (firstName) {
+      return firstName[0].toUpperCase();
+    }
+    return user?.email?.[0]?.toUpperCase() || 'U';
+  };
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -48,17 +104,62 @@ const Navigation: React.FC = () => {
                   className={`
                     flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200
                     ${isActive 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
+                      ? 'bg-green-50 text-green-600 border border-green-200' 
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }
                   `}
                 >
                   <Icon className="h-4 w-4" />
-                  <span className="hidden sm:block">{item.label}</span>
-                  <span className="sm:hidden text-[10px]">{item.label}</span>
+                  <span className="hidden md:block">{item.label}</span>
                 </NavLink>
               );
             })}
+          </div>
+
+          {/* User Menu */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {getUserInitials()}
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
+                <p className="text-xs text-gray-500">{user?.email}</p>
+              </div>
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    navigate('/settings');
+                    setShowUserMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <User className="h-4 w-4" />
+                  Account Settings
+                </button>
+                
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

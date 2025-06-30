@@ -1,0 +1,173 @@
+// Supabase-based authentication context for Financial Copilot
+// Provides authentication state management using Supabase
+
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabaseService } from '../services/supabase';
+
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  hasOnboardingData: boolean;
+  refreshOnboardingStatus: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasOnboardingData, setHasOnboardingData] = useState(false);
+
+  const isAuthenticated = !!user;
+
+  // Initialize authentication state
+  useEffect(() => {
+    initializeAuth();
+  }, []);
+
+  // Set up auth state listener
+  useEffect(() => {
+    const { data: { subscription } } = supabaseService.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await checkOnboardingStatus(session.user.id);
+        } else {
+          setHasOnboardingData(false);
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const initializeAuth = async () => {
+    try {
+      setIsLoading(true);
+      
+      const currentSession = await supabaseService.getCurrentSession();
+      const currentUser = await supabaseService.getCurrentUser();
+      
+      setSession(currentSession);
+      setUser(currentUser);
+      
+      if (currentUser) {
+        await checkOnboardingStatus(currentUser.id);
+      }
+      
+    } catch (error) {
+      console.error('Auth initialization failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkOnboardingStatus = async (userId: string) => {
+    try {
+      const onboardingData = await supabaseService.getOnboardingData(userId);
+      setHasOnboardingData(!!onboardingData?.is_complete);
+    } catch (error) {
+      console.error('Failed to check onboarding status:', error);
+      setHasOnboardingData(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      const { user } = await supabaseService.signIn(email, password);
+      
+      if (user) {
+        await checkOnboardingStatus(user.id);
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (
+    email: string, 
+    password: string, 
+    firstName?: string, 
+    lastName?: string
+  ) => {
+    try {
+      setIsLoading(true);
+      const userData = {
+        first_name: firstName,
+        last_name: lastName
+      };
+      
+      const { user } = await supabaseService.signUp(email, password, userData);
+      
+      if (user) {
+        // New user won't have onboarding data yet
+        setHasOnboardingData(false);
+      }
+    } catch (error: any) {
+      throw new Error(error.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await supabaseService.signOut();
+      setUser(null);
+      setSession(null);
+      setHasOnboardingData(false);
+    } catch (error: any) {
+      throw new Error(error.message || 'Logout failed');
+    }
+  };
+
+  const refreshOnboardingStatus = async () => {
+    if (user) {
+      await checkOnboardingStatus(user.id);
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    session,
+    isAuthenticated,
+    isLoading,
+    login,
+    register,
+    logout,
+    hasOnboardingData,
+    refreshOnboardingStatus,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

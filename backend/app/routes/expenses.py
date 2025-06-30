@@ -1,111 +1,57 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app import db
+from app.models import Expense, User
+
+bp = Blueprint('expenses', __name__, url_prefix='/api/expenses')
 
 @bp.route('/<int:expense_id>', methods=['GET'])
+@jwt_required()
 def get_expense(expense_id):
     """Get a specific expense"""
     try:
-        expense = Expense.query.get_or_404(expense_id)
+        user_id = get_jwt_identity()
+        expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first_or_404()
         return jsonify(expense.to_dict())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/<int:expense_id>', methods=['PUT'])
-def update_expense(expense_id):
-    """Update an expense"""
+@bp.route('/', methods=['GET'])
+@jwt_required()
+def list_expenses():
+    """List all expenses for authenticated user"""
     try:
-        expense = Expense.query.get_or_404(expense_id)
+        user_id = get_jwt_identity()
+        expenses = Expense.query.filter_by(user_id=user_id).order_by(Expense.created_at.desc()).all()
+        return jsonify([expense.to_dict() for expense in expenses])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/', methods=['POST'])
+@jwt_required()
+def create_expense():
+    """Create a new expense"""
+    try:
+        user_id = get_jwt_identity()
         data = request.get_json()
         
-        if 'amount' in data:
-            expense.amount = data['amount']
-        if 'category' in data:
-            expense.category = ExpenseCategory(data['category'])
-        if 'description' in data:
-            expense.description = data['description']
-        if 'vendor' in data:
-            expense.vendor = data['vendor']
-        if 'status' in data:
-            expense.status = ExpenseStatus(data['status'])
-            
-        expense.updated_at = datetime.utcnow()
+        # Validate required fields
+        if not data.get('amount') or not data.get('category'):
+            return jsonify({'error': 'Amount and category are required'}), 400
         
+        expense = Expense(
+            user_id=user_id,
+            amount=data['amount'],
+            category=data['category'],
+            description=data.get('description', ''),
+            vendor=data.get('vendor', '')
+        )
+        
+        db.session.add(expense)
         db.session.commit()
         
-        # Emit real-time update
-        socketio.emit('expense_updated', expense.to_dict())
-        
-        return jsonify(expense.to_dict())
+        return jsonify(expense.to_dict()), 201
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/<int:expense_id>', methods=['DELETE'])
-def delete_expense(expense_id):
-    """Delete an expense"""
-    try:
-        expense = Expense.query.get_or_404(expense_id)
-        
-        db.session.delete(expense)
-        db.session.commit()
-        
-        # Emit real-time update
-        socketio.emit('expense_deleted', {'id': expense_id})
-        
-        return jsonify({'message': 'Expense deleted successfully'})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/stats', methods=['GET'])
-def get_expense_stats():
-    """Get expense statistics"""
-    try:
-        from sqlalchemy import func
-        
-        # Total expenses
-        total_expenses = db.session.query(func.sum(Expense.amount)).scalar() or 0
-        
-        # Expenses by category
-        category_stats = db.session.query(
-            Expense.category,
-            func.sum(Expense.amount),
-            func.count(Expense.id)
-        ).group_by(Expense.category).all()
-        
-        # Recent trends (last 30 days)
-        from datetime import datetime, timedelta
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        
-        recent_expenses = db.session.query(
-            func.date(Expense.created_at),
-            func.sum(Expense.amount)
-        ).filter(
-            Expense.created_at >= thirty_days_ago
-        ).group_by(
-            func.date(Expense.created_at)
-        ).order_by(
-            func.date(Expense.created_at)
-        ).all()
-        
-        return jsonify({
-            'total_expenses': float(total_expenses),
-            'category_breakdown': [
-                {
-                    'category': cat.value,
-                    'total': float(total),
-                    'count': count
-                }
-                for cat, total, count in category_stats
-            ],
-            'recent_trends': [
-                {
-                    'date': date.isoformat(),
-                    'amount': float(amount)
-                }
-                for date, amount in recent_expenses
-            ]
-        })
-        
-    except Exception as e:
         return jsonify({'error': str(e)}), 500
