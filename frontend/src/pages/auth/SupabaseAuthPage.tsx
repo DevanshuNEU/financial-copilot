@@ -24,9 +24,14 @@ const SupabaseAuthPage: React.FC = () => {
 
     try {
       if (mode === 'signup') {
-        await signUp(email, password, firstName, lastName)
-        // Note: If email confirmation is required, user will get a message
-        // For now, we'll assume instant confirmation
+        const result = await signUp(email, password, firstName, lastName)
+        
+        // Check if email confirmation is required
+        if (result && result.user && !result.user.email_confirmed_at) {
+          setError('Account created! Please check your email to confirm your account, then try signing in.')
+          setMode('signin') // Switch to sign in mode
+          return
+        }
       } else {
         await signIn(email, password)
       }
