@@ -46,6 +46,9 @@ const SupabaseProtectedRoute: React.FC<SupabaseProtectedRouteProps> = ({
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {loading ? 'Checking authentication...' : 'Checking onboarding status...'}
+          </p>
         </div>
       </div>
     )
