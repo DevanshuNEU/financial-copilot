@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>
+  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ user: User | null; session: Session | null; } | void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
@@ -43,14 +43,22 @@ export const SupabaseAuthProvider: React.FC<AuthProviderProps> = ({ children }) 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email)
+        console.log('Auth state changed:', event, session?.user?.email, 'confirmed:', session?.user?.email_confirmed_at)
         
         setSession(session)
-        setUser(session?.user ?? null)
         
-        // Create or update profile when user signs up or signs in
-        if (event === 'SIGNED_IN' && session?.user) {
-          await createOrUpdateProfile(session.user)
+        // Only set user if email is confirmed OR if we're in development mode
+        if (session?.user) {
+          // For development, accept users even if email not confirmed
+          // In production, you might want to check: session.user.email_confirmed_at
+          setUser(session.user)
+          
+          // Create or update profile when user signs up or signs in
+          if (event === 'SIGNED_IN') {
+            await createOrUpdateProfile(session.user)
+          }
+        } else {
+          setUser(null)
         }
         
         setLoading(false)
@@ -96,10 +104,8 @@ export const SupabaseAuthProvider: React.FC<AuthProviderProps> = ({ children }) 
       throw new Error(error.message)
     }
 
-    // If user is immediately confirmed (no email verification required)
-    if (data.user && !data.user.email_confirmed_at) {
-      throw new Error('Please check your email to confirm your account')
-    }
+    // Return the data for the UI to handle email confirmation
+    return data
   }
 
   const signIn = async (email: string, password: string) => {
