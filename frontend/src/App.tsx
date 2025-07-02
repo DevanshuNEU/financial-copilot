@@ -28,6 +28,15 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<SupabaseAuthPage />} />
           
+          {/* Temporary Debug Route - Direct Access */}
+          <Route path="/debug-onboarding" element={<OnboardingPage />} />
+          <Route path="/debug-dashboard" element={
+            <div className="min-h-screen bg-gray-50">
+              <Navigation />
+              <DashboardPage />
+            </div>
+          } />
+          
           {/* Protected Routes - Authentication Required */}
           <Route path="/onboarding" element={
             <SupabaseProtectedRoute>
