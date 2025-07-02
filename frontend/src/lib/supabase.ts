@@ -1,8 +1,8 @@
 // Supabase client configuration for Financial Copilot
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://snztuyjjxladtqkaestf.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuenR1eWpqeGxhZHRxa2Flc3RmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDIzMTQsImV4cCI6MjA2NjMxODMxNH0.7_yRQfsPVAB65nxOfzKoHD42ZEK3wp2qdpw6FuvRsos'
+const supabaseUrl = 'https://xitnatzzojgzmtpagxpe.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpdG5hdHp6b2pnem10cGFneHBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0MjU5NjUsImV4cCI6MjA2NzAwMTk2NX0.jVVRwpOv3K734lYFgitCQYEReY__EaGo1A5MMVJA9v8'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
