@@ -76,14 +76,21 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
 
   const updateCategory = (categoryId: string, amount: string) => {
     const value = amount === '' ? 0 : Math.max(0, parseInt(amount) || 0);
+    let newCategories;
     if (value === 0) {
       // Remove category if set to 0
-      const newCategories = { ...categories };
+      newCategories = { ...categories };
       delete newCategories[categoryId];
       setCategories(newCategories);
     } else {
-      setCategories(prev => ({ ...prev, [categoryId]: value }));
+      newCategories = { ...categories, [categoryId]: value };
+      setCategories(newCategories);
     }
+    
+    // Update parent data immediately
+    onUpdate({
+      spendingCategories: newCategories
+    });
   };
 
   const autoBalance = () => {
@@ -107,6 +114,11 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
     });
 
     setCategories(newCategories);
+    
+    // Update parent data immediately
+    onUpdate({
+      spendingCategories: newCategories
+    });
   };
 
   const completeSetup = () => {
