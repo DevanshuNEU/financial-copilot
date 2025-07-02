@@ -43,8 +43,6 @@ export const SupabaseAuthProvider: React.FC<AuthProviderProps> = ({ children }) 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email, 'confirmed:', session?.user?.email_confirmed_at)
-        
         setSession(session)
         
         // Only set user if email is confirmed OR if we're in development mode

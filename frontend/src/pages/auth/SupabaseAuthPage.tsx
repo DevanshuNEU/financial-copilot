@@ -1,13 +1,14 @@
 // Simple Supabase Authentication Page
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useSupabaseAuth } from '../../contexts/SupabaseAuthContext'
 
 type AuthMode = 'signin' | 'signup'
 
 const SupabaseAuthPage: React.FC = () => {
   const navigate = useNavigate()
-  const { signIn, signUp, loading } = useSupabaseAuth()
+  const location = useLocation()
+  const { signIn, signUp, loading, user } = useSupabaseAuth()
   
   const [mode, setMode] = useState<AuthMode>('signin')
   const [email, setEmail] = useState('')
@@ -17,6 +18,14 @@ const SupabaseAuthPage: React.FC = () => {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Redirect authenticated users
+  useEffect(() => {
+    if (user && !loading) {
+      const from = location.state?.from?.pathname || '/onboarding'
+      navigate(from, { replace: true })
+    }
+  }, [user, loading, navigate, location.state])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -24,19 +33,12 @@ const SupabaseAuthPage: React.FC = () => {
 
     try {
       if (mode === 'signup') {
-        const result = await signUp(email, password, firstName, lastName)
-        
-        // Check if email confirmation is required
-        if (result && result.user && !result.user.email_confirmed_at) {
-          setError('Account created! Please check your email to confirm your account, then try signing in.')
-          setMode('signin') // Switch to sign in mode
-          return
-        }
+        await signUp(email, password, firstName, lastName)
       } else {
         await signIn(email, password)
       }
       
-      // Navigation will be handled by auth state change
+      // Navigation will be handled by useEffect above
       
     } catch (err: any) {
       setError(err.message || 'Authentication failed')
@@ -45,12 +47,25 @@ const SupabaseAuthPage: React.FC = () => {
     }
   }
 
+  // Show loading while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't show auth form if user is already authenticated
+  if (user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting...</p>
         </div>
       </div>
     )
