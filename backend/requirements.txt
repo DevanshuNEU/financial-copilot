@@ -10,3 +10,5 @@ redis==4.6.0
 python-socketio==5.8.0
 authlib==1.2.1
 requests==2.31.0
+supabase==2.3.4
+postgrest==0.16.2
