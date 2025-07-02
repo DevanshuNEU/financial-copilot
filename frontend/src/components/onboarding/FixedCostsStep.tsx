@@ -67,7 +67,14 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
         amount: parseFloat(customAmount),
         category: quickExpenseInput.category
       };
-      setFixedCosts(prev => [...prev, newCost]);
+      const updatedCosts = [...fixedCosts, newCost];
+      setFixedCosts(updatedCosts);
+      
+      // Update parent data immediately
+      onUpdate({
+        fixedCosts: updatedCosts
+      });
+      
       setQuickExpenseInput(null);
       setCustomAmount('');
     }
@@ -79,7 +86,13 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
   };
 
   const removeCost = (index: number) => {
-    setFixedCosts(prev => prev.filter((_, i) => i !== index));
+    const updatedCosts = fixedCosts.filter((_, i) => i !== index);
+    setFixedCosts(updatedCosts);
+    
+    // Update parent data immediately
+    onUpdate({
+      fixedCosts: updatedCosts
+    });
   };
 
   const addCustomCost = () => {
@@ -89,7 +102,14 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
         amount: parseFloat(customAmount),
         category: 'other'
       };
-      setFixedCosts(prev => [...prev, newCost]);
+      const updatedCosts = [...fixedCosts, newCost];
+      setFixedCosts(updatedCosts);
+      
+      // Update parent data immediately
+      onUpdate({
+        fixedCosts: updatedCosts
+      });
+      
       setCustomName('');
       setCustomAmount('');
       setShowCustomInput(false);
