@@ -52,6 +52,37 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
   const handleBudgetSuggestion = (amount: number) => {
     setMonthlyBudget(amount.toString());
     setErrors(prev => ({ ...prev, monthlyBudget: '' }));
+    
+    // Immediately update the parent data when a suggestion is selected
+    onUpdate({
+      monthlyBudget: amount,
+      currency,
+      hasMealPlan
+    });
+  };
+
+  const handleCurrencyChange = (newCurrency: string) => {
+    setCurrency(newCurrency);
+    
+    // Update parent data immediately when currency changes
+    const budget = parseFloat(monthlyBudget.toString()) || 0;
+    onUpdate({
+      monthlyBudget: budget,
+      currency: newCurrency,
+      hasMealPlan
+    });
+  };
+
+  const handleMealPlanChange = (newHasMealPlan: boolean) => {
+    setHasMealPlan(newHasMealPlan);
+    
+    // Update parent data immediately when meal plan changes
+    const budget = parseFloat(monthlyBudget.toString()) || 0;
+    onUpdate({
+      monthlyBudget: budget,
+      currency,
+      hasMealPlan: newHasMealPlan
+    });
   };
 
   const validateAndContinue = () => {
@@ -69,11 +100,12 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      onUpdate({
+      const updatedData = {
         monthlyBudget: budget,
         currency,
         hasMealPlan
-      });
+      };
+      onUpdate(updatedData);
       onNext();
     }
   };
@@ -162,7 +194,7 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
         <Label className="text-xl font-bold text-gray-900">
           What currency do you use?
         </Label>
-        <Select value={currency} onValueChange={setCurrency}>
+        <Select value={currency} onValueChange={handleCurrencyChange}>
           <SelectTrigger className="text-lg">
             <SelectValue />
           </SelectTrigger>
@@ -196,7 +228,7 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setHasMealPlan(true)}
+            onClick={() => handleMealPlanChange(true)}
             className={`p-4 border-2 rounded-lg text-left transition-colors ${
               hasMealPlan
                 ? 'border-green-500 bg-green-50'
@@ -217,7 +249,7 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setHasMealPlan(false)}
+            onClick={() => handleMealPlanChange(false)}
             className={`p-4 border-2 rounded-lg text-left transition-colors ${
               !hasMealPlan
                 ? 'border-green-500 bg-green-50'
