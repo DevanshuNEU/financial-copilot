@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { SupabaseAuthProvider } from './contexts/SupabaseAuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import Navigation from './components/navigation/Navigation';
 import ScrollToTop from './components/ui/ScrollToTop';
-import SupabaseProtectedRoute from './components/auth/SupabaseProtectedRoute';
-import SupabaseAuthPage from './pages/auth/SupabaseAuthPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import AuthPage from './pages/auth/AuthPage';
 import { 
   LandingPage,
   DashboardPage, 
@@ -15,86 +15,76 @@ import {
   SettingsPage 
 } from './pages';
 import OnboardingPage from './pages/OnboardingPage';
-import OnboardingDebugPage from './pages/OnboardingDebugPage';
+import SuperSimpleTest from './pages/SuperSimpleTest';
 import './App.css';
+
+// Import the database switcher utility
+import './utils/databaseSwitcher';
 
 function App() {
   return (
-    <SupabaseAuthProvider>
+    <AuthProvider>
       <Router>
         <ScrollToTop />
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/auth" element={<SupabaseAuthPage />} />
+          <Route path="/auth" element={<AuthPage />} />
           
-          {/* Temporary Debug Route - Direct Access */}
-          <Route path="/debug-onboarding" element={<OnboardingPage />} />
-          <Route path="/debug-dashboard" element={
-            <div className="min-h-screen bg-gray-50">
-              <Navigation />
-              <DashboardPage />
-            </div>
-          } />
+          {/* Test Route - Direct Access */}
+          <Route path="/test" element={<SuperSimpleTest />} />
           
           {/* Protected Routes - Authentication Required */}
           <Route path="/onboarding" element={
-            <SupabaseProtectedRoute>
+            <ProtectedRoute>
               <OnboardingPage />
-            </SupabaseProtectedRoute>
+            </ProtectedRoute>
           } />
           
           {/* Protected Routes - Authentication + Onboarding Required */}
           <Route path="/dashboard" element={
-            <SupabaseProtectedRoute requireOnboarding>
+            <ProtectedRoute requireOnboarding>
               <div className="min-h-screen bg-gray-50">
                 <Navigation />
                 <DashboardPage />
               </div>
-            </SupabaseProtectedRoute>
+            </ProtectedRoute>
           } />
           
           <Route path="/analytics" element={
-            <SupabaseProtectedRoute requireOnboarding>
+            <ProtectedRoute requireOnboarding>
               <div className="min-h-screen bg-gray-50">
                 <Navigation />
                 <AnalyticsPage />
               </div>
-            </SupabaseProtectedRoute>
+            </ProtectedRoute>
           } />
           
           <Route path="/budget" element={
-            <SupabaseProtectedRoute requireOnboarding>
+            <ProtectedRoute requireOnboarding>
               <div className="min-h-screen bg-gray-50">
                 <Navigation />
                 <BudgetPage />
               </div>
-            </SupabaseProtectedRoute>
+            </ProtectedRoute>
           } />
           
           <Route path="/expenses" element={
-            <SupabaseProtectedRoute requireOnboarding>
+            <ProtectedRoute requireOnboarding>
               <div className="min-h-screen bg-gray-50">
                 <Navigation />
                 <ExpensesPage />
               </div>
-            </SupabaseProtectedRoute>
+            </ProtectedRoute>
           } />
           
           <Route path="/settings" element={
-            <SupabaseProtectedRoute requireOnboarding>
+            <ProtectedRoute requireOnboarding>
               <div className="min-h-screen bg-gray-50">
                 <Navigation />
                 <SettingsPage />
               </div>
-            </SupabaseProtectedRoute>
-          } />
-          
-          {/* Debug Page - Protected but doesn't require onboarding */}
-          <Route path="/debug" element={
-            <SupabaseProtectedRoute>
-              <OnboardingDebugPage />
-            </SupabaseProtectedRoute>
+            </ProtectedRoute>
           } />
         </Routes>
         
@@ -121,7 +111,7 @@ function App() {
           }}
         />
       </Router>
-    </SupabaseAuthProvider>
+    </AuthProvider>
   );
 }
 
