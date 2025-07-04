@@ -1,44 +1,12 @@
-import React, { useState, useEffect } from 'react';
+// Analytics Page - Real user data from AppDataContext
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiService } from '../services/api';
-import { DashboardData, WeeklyComparisonData, SafeToSpendResponse } from '../types';
-import SpendingDonutChart from '../components/dashboard/SpendingDonutChart';
-import WeeklyComparison from '../components/dashboard/WeeklyComparison';
-import { TrendingUp, PieChart, Calendar, Target, BarChart3 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useAppData } from '../contexts/AppDataContext';
+import { TrendingUp, PieChart, Calendar, Target, BarChart3, AlertCircle } from 'lucide-react';
 
 const AnalyticsPage: React.FC = () => {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [weeklyData, setWeeklyData] = useState<WeeklyComparisonData | null>(null);
-  const [safeToSpendData, setSafeToSpendData] = useState<SafeToSpendResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [dashboardResponse, weeklyResponse, safeToSpendResponse] = await Promise.all([
-        apiService.getDashboardData(),
-        apiService.getWeeklyComparison(),
-        apiService.getSafeToSpend()
-      ]);
-      
-      setDashboardData(dashboardResponse);
-      setWeeklyData(weeklyResponse);
-      setSafeToSpendData(safeToSpendResponse);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load analytics data.');
-      console.error('Analytics fetch error:', err);
-      toast.error('Failed to load analytics data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { appData } = useAppData();
+  const { loading, error, expenses, budgetCategories, totalSpent, onboardingData, safeToSpendData } = appData;
 
   if (loading) {
     return (
@@ -56,21 +24,52 @@ const AnalyticsPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 p-6">
         <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle className="text-red-600">Error Loading Analytics</CardTitle>
+            <CardTitle className="text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Error Loading Analytics
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">{error}</p>
-            <button 
-              onClick={fetchData}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-            >
-              Retry
-            </button>
+            <p className="text-sm text-gray-500">
+              Please ensure you've completed the onboarding process and try refreshing the page.
+            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  if (!onboardingData || !safeToSpendData) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="text-yellow-600">Setup Required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Complete your financial setup to view detailed analytics.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Calculate analytics data from real user data
+  const totalTransactions = expenses.length;
+  const categoriesUsed = budgetCategories.length;
+  const currencySymbol = safeToSpendData.currency === 'USD' ? '$' : onboardingData.currency;
+
+  // Calculate insights
+  const topSpendingCategories = budgetCategories
+    .filter(cat => cat.spent > 0)
+    .sort((a, b) => b.spent - a.spent)
+    .slice(0, 3);
+
+  const budgetWarnings = budgetCategories.filter(cat => cat.percentage > 80);
+  const healthyCategories = budgetCategories.filter(cat => cat.percentage <= 80 && cat.spent > 0);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -95,7 +94,7 @@ const AnalyticsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-900">
-                ${dashboardData?.overview.total_expenses.toFixed(2)}
+                {currencySymbol}{totalSpent.toFixed(2)}
               </div>
               <p className="text-xs text-blue-600 mt-1">
                 Across all categories
@@ -110,7 +109,7 @@ const AnalyticsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-900">
-                {dashboardData?.overview.total_transactions}
+                {totalTransactions}
               </div>
               <p className="text-xs text-green-600 mt-1">
                 Expenses recorded
@@ -125,7 +124,7 @@ const AnalyticsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-900">
-                {dashboardData?.category_breakdown.length || 0}
+                {categoriesUsed}
               </div>
               <p className="text-xs text-purple-600 mt-1">
                 Different spending areas
@@ -134,89 +133,189 @@ const AnalyticsPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Interactive Category Breakdown */}
-        {dashboardData && safeToSpendData && (
+        {/* Spending Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Category Breakdown Chart */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-blue-600" />
-                Category Breakdown
+                Spending Breakdown
               </CardTitle>
               <CardDescription>
-                Interactive view of your spending by category with budget comparisons
+                Where your money is going this month
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <SpendingDonutChart
-                data={dashboardData.category_breakdown.map(cat => ({
-                  ...cat,
-                  budget: safeToSpendData.budget_status.find(b => b.category === cat.category)?.limit || 0,
-                  lastWeekTotal: 0, // TODO: Add last week data from backend
-                }))}
-                totalSpent={dashboardData.overview.total_expenses}
-                totalBudget={safeToSpendData.safe_to_spend.total_budget}
-              />
+              {totalSpent > 0 ? (
+                <div className="space-y-4">
+                  {/* Simple donut chart representation */}
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-gray-900">
+                      {currencySymbol}{totalSpent.toFixed(0)}
+                    </div>
+                    <div className="text-sm text-gray-500">Total Spent</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {((totalSpent / safeToSpendData.totalBudget) * 100).toFixed(1)}% of budget
+                    </div>
+                  </div>
+                  
+                  {/* Category breakdown list */}
+                  <div className="space-y-2">
+                    {budgetCategories
+                      .filter(cat => cat.spent > 0)
+                      .sort((a, b) => b.spent - a.spent)
+                      .map((category, index) => (
+                        <div key={category.name} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ 
+                                backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)` 
+                              }}
+                            />
+                            <span className="font-medium text-gray-900 capitalize">
+                              {category.name}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium text-gray-900">
+                              {currencySymbol}{category.spent.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {category.percentage.toFixed(1)}% used
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <PieChart className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p>No expenses recorded yet</p>
+                  <p className="text-sm">Start tracking your spending to see insights here</p>
+                </div>
+              )}
             </CardContent>
           </Card>
-        )}
 
-        {/* Weekly Comparison */}
-        {weeklyData && weeklyData.weeklyData && (
+          {/* Budget Health */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                Weekly Spending Trends
+                <Target className="h-5 w-5 text-green-600" />
+                Budget Health
               </CardTitle>
               <CardDescription>
-                Compare your current week's spending with last week to track progress
+                How well you're staying within your limits
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <WeeklyComparison
-                weeklyData={weeklyData.weeklyData}
-                thisWeekTotal={weeklyData.thisWeekTotal}
-                lastWeekTotal={weeklyData.lastWeekTotal}
-                currentDayOfWeek={weeklyData.currentDayOfWeek}
-              />
+              <div className="space-y-4">
+                {/* Overall budget progress */}
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium text-blue-900">Overall Progress</span>
+                    <span className="text-blue-700">
+                      {((totalSpent / safeToSpendData.totalBudget) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ 
+                        width: `${Math.min(100, (totalSpent / safeToSpendData.totalBudget) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                  <div className="text-sm text-blue-600 mt-1">
+                    {currencySymbol}{(safeToSpendData.totalBudget - totalSpent).toFixed(2)} remaining
+                  </div>
+                </div>
+
+                {/* Category health indicators */}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Category Status</div>
+                  
+                  {healthyCategories.length > 0 && (
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <div className="text-sm font-medium text-green-800 mb-1">
+                        ✅ Healthy ({healthyCategories.length})
+                      </div>
+                      <div className="text-xs text-green-600">
+                        {healthyCategories.map(cat => cat.name).join(', ')}
+                      </div>
+                    </div>
+                  )}
+
+                  {budgetWarnings.length > 0 && (
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <div className="text-sm font-medium text-orange-800 mb-1">
+                        ⚠️ Near Limit ({budgetWarnings.length})
+                      </div>
+                      <div className="text-xs text-orange-600">
+                        {budgetWarnings.map(cat => `${cat.name} (${cat.percentage.toFixed(0)}%)`).join(', ')}
+                      </div>
+                    </div>
+                  )}
+
+                  {budgetCategories.filter(cat => cat.spent === 0).length > 0 && (
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm font-medium text-gray-700 mb-1">
+                        💤 Unused Categories ({budgetCategories.filter(cat => cat.spent === 0).length})
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {budgetCategories.filter(cat => cat.spent === 0).map(cat => cat.name).join(', ')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
-        )}
+        </div>
 
-        {/* Insights Section */}
-        <Card className="border-2 border-yellow-200 bg-yellow-50">
-          <CardHeader>
-            <CardTitle className="text-yellow-800">💡 Smart Insights</CardTitle>
-            <CardDescription className="text-yellow-700">
-              AI-powered observations about your spending patterns
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {dashboardData?.category_breakdown
-                .sort((a, b) => b.total - a.total)
-                .slice(0, 3)
-                .map((category, index) => (
-                  <div key={category.category} className="flex items-center justify-between p-3 bg-white rounded-lg border border-yellow-200">
+        {/* Smart Insights */}
+        {topSpendingCategories.length > 0 && (
+          <Card className="border-2 border-yellow-200 bg-yellow-50">
+            <CardHeader>
+              <CardTitle className="text-yellow-800">💡 Smart Insights</CardTitle>
+              <CardDescription className="text-yellow-700">
+                AI-powered observations about your spending patterns
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topSpendingCategories.map((category, index) => (
+                  <div key={category.name} className="flex items-center justify-between p-3 bg-white rounded-lg border border-yellow-200">
                     <div>
                       <span className="font-medium text-gray-900 capitalize">
-                        #{index + 1} spending area: {category.category}
+                        #{index + 1} spending area: {category.name}
                       </span>
                       <p className="text-sm text-gray-600">
-                        ${category.total.toFixed(2)} spent this month
+                        {currencySymbol}{category.spent.toFixed(2)} spent this month
                       </p>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-medium text-yellow-700">
-                        {((category.total / (dashboardData?.overview.total_expenses || 1)) * 100).toFixed(1)}%
+                        {((category.spent / totalSpent) * 100).toFixed(1)}%
                       </div>
                       <div className="text-xs text-gray-500">of total</div>
                     </div>
                   </div>
                 ))}
-            </div>
-          </CardContent>
-        </Card>
+                
+                {totalSpent === 0 && (
+                  <div className="text-center py-4 text-yellow-700">
+                    <p className="font-medium">Ready to start tracking!</p>
+                    <p className="text-sm">Add your first expense to see personalized insights here.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
