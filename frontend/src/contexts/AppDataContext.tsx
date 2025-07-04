@@ -5,6 +5,12 @@ import { financialService } from '../services/financialService'
 import type { OnboardingData, PersonalizedSafeToSpend } from '../types/services'
 
 // Extended types for complete app state
+export interface ExtendedSafeToSpendData extends PersonalizedSafeToSpend {
+  totalSpent: number
+  availableAmount: number
+  dailySpendingGuide: number
+}
+
 export interface UserExpense {
   id: string
   amount: number
@@ -45,7 +51,7 @@ export interface AppDataState {
   // User data
   user: UserProfile | null
   onboardingData: OnboardingData | null
-  safeToSpendData: PersonalizedSafeToSpend | null
+  safeToSpendData: ExtendedSafeToSpendData | null
   
   // Financial data
   expenses: UserExpense[]
@@ -131,17 +137,40 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         return
       }
 
-      // Calculate safe to spend data
-      const safeToSpend = financialService.calculatePersonalizedSafeToSpend(onboarding)
+      // Calculate safe to spend data - with actual expenses considered
+      const baseSafeToSpend = financialService.calculatePersonalizedSafeToSpend(onboarding)
 
       // Load expenses (from localStorage for now)
-      const expenses = loadUserExpenses()
+      const userExpenses = loadUserExpenses()
 
-      // Calculate budget categories from onboarding data
-      const budgetCategories = calculateBudgetCategories(onboarding, expenses)
+      // Add fixed costs as system expenses
+      const fixedCostExpenses: UserExpense[] = onboarding.fixedCosts.map(cost => ({
+        id: `fixed_cost_${cost.name.toLowerCase().replace(/\s+/g, '_')}`,
+        amount: cost.amount,
+        description: cost.name,
+        category: 'Fixed Costs',
+        vendor: 'Monthly Fixed Cost',
+        date: new Date().toISOString().split('T')[0], // Today's date
+        status: 'approved' as const,
+        createdAt: new Date().toISOString()
+      }))
 
-      // Calculate total spending
-      const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+      // Combine user expenses with fixed cost expenses
+      const allExpenses = [...userExpenses, ...fixedCostExpenses]
+
+      // Calculate total spending (only from user expenses, not fixed costs)
+      const totalSpent = userExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+
+      // Update safe to spend data with actual expenses
+      const safeToSpend = {
+        ...baseSafeToSpend,
+        totalSpent,
+        availableAmount: Math.max(0, baseSafeToSpend.availableForSpending - totalSpent),
+        dailySpendingGuide: Math.max(0, (baseSafeToSpend.availableForSpending - totalSpent) / baseSafeToSpend.daysLeftInMonth)
+      }
+
+      // Calculate budget categories from onboarding data (use user expenses only)
+      const budgetCategories = calculateBudgetCategories(onboarding, userExpenses)
 
       // Create user profile
       const userProfile: UserProfile = {
@@ -165,7 +194,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         user: userProfile,
         onboardingData: onboarding,
         safeToSpendData: safeToSpend,
-        expenses,
+        expenses: allExpenses, // Show both user expenses and fixed costs
         budgetCategories,
         totalSpent,
         loading: false,
@@ -236,25 +265,39 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
       createdAt: new Date().toISOString()
     }
 
-    const updatedExpenses = [...appData.expenses, newExpense]
-    saveUserExpenses(updatedExpenses)
+    // Only save user expenses, not fixed costs
+    const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+    const updatedUserExpenses = [...userExpenses, newExpense]
+    saveUserExpenses(updatedUserExpenses)
 
     // Recalculate everything
     await refreshAppData()
   }
 
   const updateExpense = async (id: string, updates: Partial<UserExpense>): Promise<void> => {
-    const updatedExpenses = appData.expenses.map(expense =>
+    // Only update user expenses, not fixed costs
+    if (id.startsWith('fixed_cost_')) {
+      throw new Error('Cannot update fixed cost expenses')
+    }
+
+    const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+    const updatedUserExpenses = userExpenses.map(expense =>
       expense.id === id ? { ...expense, ...updates } : expense
     )
     
-    saveUserExpenses(updatedExpenses)
+    saveUserExpenses(updatedUserExpenses)
     await refreshAppData()
   }
 
   const deleteExpense = async (id: string): Promise<void> => {
-    const updatedExpenses = appData.expenses.filter(expense => expense.id !== id)
-    saveUserExpenses(updatedExpenses)
+    // Only delete user expenses, not fixed costs
+    if (id.startsWith('fixed_cost_')) {
+      throw new Error('Cannot delete fixed cost expenses')
+    }
+
+    const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+    const updatedUserExpenses = userExpenses.filter(expense => expense.id !== id)
+    saveUserExpenses(updatedUserExpenses)
     await refreshAppData()
   }
 

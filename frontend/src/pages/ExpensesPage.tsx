@@ -359,26 +359,34 @@ const ExpensesPage: React.FC = () => {
                         
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity duration-200">
-                          <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1 border">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleEditExpense(expense)}
-                              className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-150"
-                              title="Edit expense"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDeleteClick(expense)}
-                              className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 transition-colors duration-150"
-                              title="Delete expense"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {expense.id.startsWith('fixed_cost_') ? (
+                            // Fixed cost expenses - show as system expenses
+                            <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-lg border">
+                              Monthly Fixed Cost
+                            </div>
+                          ) : (
+                            // User expenses - allow edit/delete
+                            <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1 border">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditExpense(expense)}
+                                className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-150"
+                                title="Edit expense"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteClick(expense)}
+                                className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 transition-colors duration-150"
+                                title="Delete expense"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
