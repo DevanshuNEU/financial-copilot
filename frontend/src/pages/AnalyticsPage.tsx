@@ -230,7 +230,7 @@ const AnalyticsPage: React.FC = () => {
                     />
                   </div>
                   <div className="text-sm text-blue-600 mt-1">
-                    {currencySymbol}{(safeToSpendData.totalBudget - totalSpent).toFixed(2)} remaining
+                    {currencySymbol}{safeToSpendData.availableAmount.toFixed(2)} remaining
                   </div>
                 </div>
 

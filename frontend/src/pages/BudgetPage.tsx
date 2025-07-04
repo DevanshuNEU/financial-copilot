@@ -77,7 +77,9 @@ const BudgetPage: React.FC = () => {
 
   // Calculate budget health metrics
   const totalBudget = safeToSpendData.totalBudget;
-  const overallProgress = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  const actualTotalSpent = safeToSpendData.totalFixedCosts + totalSpent; // Fixed costs + expenses
+  const actualRemaining = safeToSpendData.availableAmount; // This is already calculated correctly
+  const overallProgress = totalBudget > 0 ? (actualTotalSpent / totalBudget) * 100 : 0;
   const currencySymbol = safeToSpendData.currency === 'USD' ? '$' : onboardingData.currency;
   
   // Categorize budget items by status
@@ -176,14 +178,14 @@ const BudgetPage: React.FC = () => {
                 
                 <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                   <div className="text-2xl font-bold text-green-600">
-                    {currencySymbol}{totalSpent.toFixed(2)}
+                    {currencySymbol}{actualTotalSpent.toFixed(2)}
                   </div>
                   <div className="text-sm text-green-700">Amount Spent</div>
                 </div>
                 
                 <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
                   <div className="text-2xl font-bold text-purple-600">
-                    {currencySymbol}{(totalBudget - totalSpent).toFixed(2)}
+                    {currencySymbol}{actualRemaining.toFixed(2)}
                   </div>
                   <div className="text-sm text-purple-700">Remaining</div>
                 </div>
