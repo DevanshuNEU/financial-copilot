@@ -32,8 +32,8 @@ const SettingsPage: React.FC = () => {
   // Extract user data with fallbacks
   const userEmail = appData.user?.email || 'Unknown User';
   const studentType = appData.user?.studentType || 'international';
-  const totalBudget = appData.onboardingData?.totalBudget || 0;
-  const currency = appData.user?.preferences?.currency || 'USD';
+  const monthlyBudget = appData.onboardingData?.monthlyBudget || 0;
+  const currency = appData.user?.preferences?.currency || appData.onboardingData?.currency || 'USD';
   const notifications = appData.user?.preferences?.notifications || {
     budgetWarnings: true,
     dailySummaries: false,
@@ -83,7 +83,7 @@ const SettingsPage: React.FC = () => {
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-2">Student Profile</p>
                 <p className="font-medium">{getStudentTypeDisplay(studentType)}</p>
-                <p className="text-sm text-gray-500">Monthly Budget: {formatBudget(totalBudget)}</p>
+                <p className="text-sm text-gray-500">Monthly Budget: {formatBudget(monthlyBudget)}</p>
                 {appData.user?.university && (
                   <p className="text-xs text-gray-400 mt-1">{appData.user.university}</p>
                 )}
