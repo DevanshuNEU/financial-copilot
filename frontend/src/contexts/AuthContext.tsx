@@ -1,46 +1,37 @@
-// Deprecated AuthContext - Use SupabaseAuthContext instead
-// This file exists only to prevent import errors in legacy files
-
-import React, { createContext, useContext, ReactNode } from 'react';
-
-interface AuthContextType {
-  user: any;
-  login: () => Promise<void>;
-  logout: () => void;
-  register: () => Promise<void>;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  hasOnboardingData: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Main Auth Context - Properly handles switching without hook violations
+import React, { ReactNode, createContext, useContext } from 'react'
+import { databaseConfig } from '../config/database'
+import { LocalAuthProvider, useLocalAuth } from './authContext.local'
+import { SupabaseAuthProvider, useSupabaseAuth } from './authContext.supabase'
+import type { IAuthService } from '../types/services'
 
 interface AuthProviderProps {
-  children: ReactNode;
+  children: ReactNode
 }
 
+// Main Auth Provider - switches based on config
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const value: AuthContextType = {
-    user: null,
-    login: async () => console.warn('Using deprecated AuthContext'),
-    logout: () => console.warn('Using deprecated AuthContext'),
-    register: async () => console.warn('Using deprecated AuthContext'),
-    isAuthenticated: false,
-    isLoading: false,
-    hasOnboardingData: false,
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (databaseConfig.mode === 'local') {
+    console.log('🔐 Using LOCAL authentication')
+    return <LocalAuthProvider>{children}</LocalAuthProvider>
+  } else {
+    console.log('🔐 Using SUPABASE authentication')
+    return <SupabaseAuthProvider>{children}</SupabaseAuthProvider>
   }
-  return context;
-};
+}
+
+// Create a unified auth hook that works with both providers
+export const useAuth = (): IAuthService => {
+  if (databaseConfig.mode === 'local') {
+    return useLocalAuth()
+  } else {
+    return useSupabaseAuth()
+  }
+}
+
+// Export individual hooks for direct access if needed
+export { useLocalAuth, useSupabaseAuth }
+
+// Export auth types for TypeScript
+export type { IAuthService } from '../types/services'
+export type { User } from '../types/services'
