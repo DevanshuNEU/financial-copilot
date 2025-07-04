@@ -1,12 +1,10 @@
+// Expenses Page - Real user data from AppDataContext
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { apiService } from '../services/api';
-import { Expense } from '../types';
-import AddExpenseModal from '../components/dashboard/AddExpenseModal';
-import { EditExpenseModal } from '../components/dashboard/EditExpenseModal';
-import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { useAppData } from '../contexts/AppDataContext';
+import type { UserExpense } from '../contexts/AppDataContext';
 import { 
   Receipt, 
   Search, 
@@ -15,49 +13,32 @@ import {
   Trash2, 
   Calendar,
   DollarSign,
-  Tag
+  Tag,
+  AlertCircle,
+  Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ExpensesPage: React.FC = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { appData, addExpense, updateExpense, deleteExpense } = useAppData();
+  const { loading, error, expenses, onboardingData } = appData;
+  
+  const [filteredExpenses, setFilteredExpenses] = useState<UserExpense[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showAddModal, setShowAddModal] = useState(false);
   
   // Modal states
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editingExpense, setEditingExpense] = useState<UserExpense | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
-    expense: Expense | null;
+    expense: UserExpense | null;
     isLoading: boolean;
   }>({
     isOpen: false,
     expense: null,
     isLoading: false,
   });
-
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.getExpenses();
-      setExpenses(response.expenses);
-      setFilteredExpenses(response.expenses);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load expenses.');
-      console.error('Expenses fetch error:', err);
-      toast.error('Failed to load expenses');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
 
   // Filter expenses based on search and category
   useEffect(() => {
@@ -67,7 +48,7 @@ const ExpensesPage: React.FC = () => {
     if (searchTerm) {
       filtered = filtered.filter(expense =>
         expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (expense.vendor?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         expense.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -80,11 +61,35 @@ const ExpensesPage: React.FC = () => {
     setFilteredExpenses(filtered);
   }, [expenses, searchTerm, selectedCategory]);
 
-  const handleEditExpense = (expense: Expense) => {
+  const handleAddExpense = async (expenseData: Omit<UserExpense, 'id' | 'createdAt'>) => {
+    try {
+      await addExpense(expenseData);
+      setShowAddModal(false);
+      toast.success('Expense added successfully!');
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      toast.error('Failed to add expense. Please try again.');
+    }
+  };
+
+  const handleEditExpense = (expense: UserExpense) => {
     setEditingExpense(expense);
   };
 
-  const handleDeleteClick = (expense: Expense) => {
+  const handleUpdateExpense = async (updates: Partial<UserExpense>) => {
+    if (!editingExpense) return;
+
+    try {
+      await updateExpense(editingExpense.id, updates);
+      setEditingExpense(null);
+      toast.success('Expense updated successfully!');
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      toast.error('Failed to update expense. Please try again.');
+    }
+  };
+
+  const handleDeleteClick = (expense: UserExpense) => {
     setDeleteDialog({
       isOpen: true,
       expense,
@@ -98,9 +103,8 @@ const ExpensesPage: React.FC = () => {
     setDeleteDialog(prev => ({ ...prev, isLoading: true }));
 
     try {
-      await apiService.deleteExpense(deleteDialog.expense.id);
+      await deleteExpense(deleteDialog.expense.id);
       toast.success('Expense deleted successfully!');
-      await fetchExpenses();
       setDeleteDialog({
         isOpen: false,
         expense: null,
@@ -123,12 +127,15 @@ const ExpensesPage: React.FC = () => {
     }
   };
 
-  // Get unique categories for filter
-  const categories = Array.from(new Set(expenses.map(expense => expense.category)));
+  // Get unique categories for filter (from both onboarding and actual expenses)
+  const onboardingCategories = onboardingData ? Object.keys(onboardingData.spendingCategories) : [];
+  const expenseCategories = Array.from(new Set(expenses.map(expense => expense.category)));
+  const categories = Array.from(new Set([...onboardingCategories, ...expenseCategories]));
 
   // Calculate summary stats
   const totalSpent = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const averageExpense = filteredExpenses.length > 0 ? totalSpent / filteredExpenses.length : 0;
+  const currencySymbol = onboardingData?.currency === 'USD' ? '$' : (onboardingData?.currency || '$');
 
   if (loading) {
     return (
@@ -146,13 +153,33 @@ const ExpensesPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 p-6">
         <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle className="text-red-600">Error Loading Expenses</CardTitle>
+            <CardTitle className="text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Error Loading Expenses
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">{error}</p>
-            <Button onClick={fetchExpenses} className="w-full">
-              Retry
-            </Button>
+            <p className="text-sm text-gray-500">
+              Please ensure you've completed the onboarding process and try refreshing the page.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!onboardingData) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="text-yellow-600">Setup Required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Complete your financial setup to start tracking expenses.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -173,7 +200,13 @@ const ExpensesPage: React.FC = () => {
               Track, edit, and organize all your spending
             </p>
           </div>
-          <AddExpenseModal onExpenseAdded={fetchExpenses} />
+          <Button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Expense
+          </Button>
         </div>
 
         {/* Summary Cards */}
@@ -185,7 +218,7 @@ const ExpensesPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-900">
-                ${totalSpent.toFixed(2)}
+                {currencySymbol}{totalSpent.toFixed(2)}
               </div>
               <p className="text-xs text-green-600 mt-1">
                 {filteredExpenses.length} expenses
@@ -200,7 +233,7 @@ const ExpensesPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-900">
-                ${averageExpense.toFixed(2)}
+                {currencySymbol}{averageExpense.toFixed(2)}
               </div>
               <p className="text-xs text-blue-600 mt-1">
                 per transaction
@@ -287,23 +320,32 @@ const ExpensesPage: React.FC = () => {
                     : "No expenses match your current filters."
                   }
                 </p>
+                {expenses.length === 0 && (
+                  <Button 
+                    onClick={() => setShowAddModal(true)}
+                    className="mt-4"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Expense
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredExpenses
-                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                   .map((expense) => (
                     <div key={expense.id} className="group relative flex items-center justify-between p-4 border rounded-lg hover:shadow-md hover:border-gray-300 transition-all duration-200 bg-white">
                       <div className="flex-1 min-w-0 pr-4">
                         <div className="font-medium text-gray-900 truncate">{expense.description}</div>
                         <div className="text-sm text-gray-500 mt-1">
-                          {expense.vendor} • <span className="capitalize">{expense.category}</span> • {new Date(expense.created_at).toLocaleDateString()}
+                          {expense.vendor || 'No vendor'} • <span className="capitalize">{expense.category}</span> • {new Date(expense.date).toLocaleDateString()}
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <div className="font-bold text-lg text-gray-900">${expense.amount.toFixed(2)}</div>
+                          <div className="font-bold text-lg text-gray-900">{currencySymbol}{expense.amount.toFixed(2)}</div>
                           <div className="text-sm">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               expense.status === 'approved' ? 'bg-green-100 text-green-800' :
@@ -346,28 +388,313 @@ const ExpensesPage: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Add Expense Modal */}
+        {showAddModal && (
+          <SimpleAddExpenseModal 
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            onExpenseAdded={handleAddExpense}
+            availableCategories={categories}
+          />
+        )}
+
         {/* Edit Expense Modal */}
-        <EditExpenseModal
-          isOpen={!!editingExpense}
-          onClose={() => setEditingExpense(null)}
-          expense={editingExpense}
-          onExpenseUpdated={fetchExpenses}
-        />
+        {editingExpense && (
+          <EditExpenseModal
+            isOpen={!!editingExpense}
+            onClose={() => setEditingExpense(null)}
+            expense={editingExpense}
+            onExpenseUpdated={handleUpdateExpense}
+            availableCategories={categories}
+          />
+        )}
 
         {/* Delete Confirmation Dialog */}
-        <DeleteDialog
-          isOpen={deleteDialog.isOpen}
-          onClose={handleDeleteCancel}
-          onConfirm={handleDeleteConfirm}
-          title="Delete Expense"
-          description={
-            deleteDialog.expense
-              ? `Are you sure you want to delete "${deleteDialog.expense.description}" ($${deleteDialog.expense.amount.toFixed(2)})? This action cannot be undone.`
-              : ''
-          }
-          isLoading={deleteDialog.isLoading}
-        />
+        {deleteDialog.isOpen && deleteDialog.expense && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle className="text-red-600">Delete Expense</CardTitle>
+                <CardDescription>
+                  Are you sure you want to delete "{deleteDialog.expense.description}" ({currencySymbol}{deleteDialog.expense.amount.toFixed(2)})? 
+                  This action cannot be undone.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-end gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDeleteCancel}
+                    disabled={deleteDialog.isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteConfirm}
+                    disabled={deleteDialog.isLoading}
+                  >
+                    {deleteDialog.isLoading ? 'Deleting...' : 'Delete'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
+    </div>
+  );
+};
+
+// Simple Add Expense Modal Component (inline for now)
+const SimpleAddExpenseModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onExpenseAdded: (expenseData: Omit<UserExpense, 'id' | 'createdAt'>) => void;
+  availableCategories: string[];
+}> = ({ isOpen, onClose, onExpenseAdded, availableCategories }) => {
+  const [formData, setFormData] = useState({
+    description: '',
+    amount: '',
+    category: availableCategories[0] || '',
+    vendor: '',
+    status: 'pending' as const,
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const amount = parseFloat(formData.amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      toast.error('Please enter a description');
+      return;
+    }
+
+    onExpenseAdded({
+      description: formData.description.trim(),
+      amount,
+      category: formData.category,
+      vendor: formData.vendor.trim(),
+      status: formData.status,
+      date: formData.date
+    });
+
+    // Reset form
+    setFormData({
+      description: '',
+      amount: '',
+      category: availableCategories[0] || '',
+      vendor: '',
+      status: 'pending',
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Add New Expense</CardTitle>
+          <CardDescription>
+            Record a new expense to track your spending
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Description *</label>
+              <Input
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                placeholder="What did you spend on?"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Amount *</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.amount}
+                onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                placeholder="0.00"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Category *</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                className="w-full px-3 py-2 border rounded-md"
+                required
+              >
+                {availableCategories.map(category => (
+                  <option key={category} value={category} className="capitalize">
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Vendor (Optional)</label>
+              <Input
+                value={formData.vendor}
+                onChange={(e) => setFormData({...formData, vendor: e.target.value})}
+                placeholder="Where did you spend?"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Date</label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({...formData, date: e.target.value})}
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Add Expense
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Simple Edit Expense Modal Component (inline for now)
+const EditExpenseModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  expense: UserExpense;
+  onExpenseUpdated: (updates: Partial<UserExpense>) => void;
+  availableCategories: string[];
+}> = ({ isOpen, onClose, expense, onExpenseUpdated, availableCategories }) => {
+  const [formData, setFormData] = useState({
+    description: expense.description,
+    amount: expense.amount.toString(),
+    category: expense.category,
+    vendor: expense.vendor || '',
+    status: expense.status
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const amount = parseFloat(formData.amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    onExpenseUpdated({
+      description: formData.description,
+      amount,
+      category: formData.category,
+      vendor: formData.vendor,
+      status: formData.status as 'pending' | 'approved' | 'rejected'
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Edit Expense</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Description</label>
+              <Input
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Amount</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.amount}
+                onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                className="w-full px-3 py-2 border rounded-md"
+                required
+              >
+                {availableCategories.map(category => (
+                  <option key={category} value={category} className="capitalize">
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Vendor (Optional)</label>
+              <Input
+                value={formData.vendor}
+                onChange={(e) => setFormData({...formData, vendor: e.target.value})}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({...formData, status: e.target.value as 'pending' | 'approved' | 'rejected'})}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Update Expense
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

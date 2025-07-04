@@ -1,42 +1,30 @@
-import React, { useState, useEffect } from 'react';
+// Budget Page - Real user data from AppDataContext
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { apiService } from '../services/api';
-import { SafeToSpendResponse } from '../types';
+import { Input } from '@/components/ui/input';
+import { useAppData } from '../contexts/AppDataContext';
 import { 
   PiggyBank, 
   TrendingUp, 
   AlertTriangle, 
   CheckCircle,
   Target,
-  DollarSign
+  DollarSign,
+  Edit3,
+  Save,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const BudgetPage: React.FC = () => {
-  const [safeToSpendData, setSafeToSpendData] = useState<SafeToSpendResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const safeToSpendResponse = await apiService.getSafeToSpend();
-      setSafeToSpendData(safeToSpendResponse);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load budget data.');
-      console.error('Budget fetch error:', err);
-      toast.error('Failed to load budget data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { appData, updateBudgetCategory } = useAppData();
+  const { loading, error, budgetCategories, onboardingData, safeToSpendData, totalSpent } = appData;
+  
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
 
   if (loading) {
     return (
@@ -54,34 +42,48 @@ const BudgetPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 p-6">
         <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle className="text-red-600">Error Loading Budget</CardTitle>
+            <CardTitle className="text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Error Loading Budget
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">{error}</p>
-            <Button onClick={fetchData} className="w-full">
-              Retry
-            </Button>
+            <p className="text-sm text-gray-500">
+              Please ensure you've completed the onboarding process and try refreshing the page.
+            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (!safeToSpendData) {
-    return null;
+  if (!onboardingData || !safeToSpendData) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="text-yellow-600">Setup Required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Complete your financial setup to view detailed budget management.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  const { budget_status, safe_to_spend } = safeToSpendData;
-  
-  // Calculate overall budget health
-  const totalBudget = safe_to_spend.total_budget;
-  const totalSpent = safe_to_spend.total_spent;
-  const overallProgress = (totalSpent / totalBudget) * 100;
+  // Calculate budget health metrics
+  const totalBudget = safeToSpendData.totalBudget;
+  const overallProgress = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  const currencySymbol = safeToSpendData.currency === 'USD' ? '$' : onboardingData.currency;
   
   // Categorize budget items by status
-  const healthyCategories = budget_status.filter(cat => cat.percentage_used <= 80);
-  const warningCategories = budget_status.filter(cat => cat.percentage_used > 80 && cat.percentage_used <= 100);
-  const overBudgetCategories = budget_status.filter(cat => cat.percentage_used > 100);
+  const healthyCategories = budgetCategories.filter(cat => cat.percentage <= 80);
+  const warningCategories = budgetCategories.filter(cat => cat.percentage > 80 && cat.percentage <= 100);
+  const overBudgetCategories = budgetCategories.filter(cat => cat.percentage > 100);
 
   const getBudgetColor = (percentage: number) => {
     if (percentage <= 60) return 'green';
@@ -94,6 +96,35 @@ const BudgetPage: React.FC = () => {
     if (percentage <= 80) return CheckCircle;
     if (percentage <= 100) return AlertTriangle;
     return AlertTriangle;
+  };
+
+  const handleEditCategory = (categoryName: string, currentBudget: number) => {
+    setEditingCategory(categoryName);
+    setEditValue(currentBudget.toString());
+  };
+
+  const handleSaveCategory = async (categoryName: string) => {
+    const newBudget = parseFloat(editValue);
+    
+    if (isNaN(newBudget) || newBudget < 0) {
+      toast.error('Please enter a valid budget amount');
+      return;
+    }
+
+    try {
+      await updateBudgetCategory(categoryName, newBudget);
+      setEditingCategory(null);
+      setEditValue('');
+      toast.success(`Updated ${categoryName} budget`);
+    } catch (error) {
+      toast.error('Failed to update budget category');
+      console.error('Budget update error:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setEditValue('');
   };
 
   return (
@@ -138,21 +169,21 @@ const BudgetPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="text-2xl font-bold text-blue-600">
-                    ${totalBudget.toFixed(2)}
+                    {currencySymbol}{totalBudget.toFixed(2)}
                   </div>
                   <div className="text-sm text-blue-700">Total Budget</div>
                 </div>
                 
                 <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                   <div className="text-2xl font-bold text-green-600">
-                    ${totalSpent.toFixed(2)}
+                    {currencySymbol}{totalSpent.toFixed(2)}
                   </div>
                   <div className="text-sm text-green-700">Amount Spent</div>
                 </div>
                 
                 <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
                   <div className="text-2xl font-bold text-purple-600">
-                    ${(totalBudget - totalSpent).toFixed(2)}
+                    {currencySymbol}{(totalBudget - totalSpent).toFixed(2)}
                   </div>
                   <div className="text-sm text-purple-700">Remaining</div>
                 </div>
@@ -222,15 +253,16 @@ const BudgetPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {budget_status
-                .sort((a, b) => b.percentage_used - a.percentage_used)
+              {budgetCategories
+                .sort((a, b) => b.percentage - a.percentage)
                 .map((category) => {
-                  const color = getBudgetColor(category.percentage_used);
-                  const Icon = getBudgetIcon(category.percentage_used);
-                  const isOverBudget = category.percentage_used > 100;
+                  const color = getBudgetColor(category.percentage);
+                  const Icon = getBudgetIcon(category.percentage);
+                  const isOverBudget = category.percentage > 100;
+                  const isEditing = editingCategory === category.name;
                   
                   return (
-                    <div key={category.category} className="p-4 border rounded-lg bg-white hover:shadow-md transition-shadow">
+                    <div key={category.name} className="p-4 border rounded-lg bg-white hover:shadow-md transition-shadow">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                           <Icon className={`h-5 w-5 ${
@@ -241,31 +273,71 @@ const BudgetPage: React.FC = () => {
                           }`} />
                           <div>
                             <h3 className="font-medium text-gray-900 capitalize">
-                              {category.category}
+                              {category.name}
                             </h3>
                             <p className="text-sm text-gray-500">
-                              ${category.spent.toFixed(2)} of ${category.limit.toFixed(2)}
+                              {currencySymbol}{category.spent.toFixed(2)} of {currencySymbol}{category.budgeted.toFixed(2)}
                             </p>
                           </div>
                         </div>
                         
-                        <div className="text-right">
-                          <div className={`text-lg font-bold ${
-                            color === 'green' ? 'text-green-600' :
-                            color === 'yellow' ? 'text-yellow-600' :
-                            color === 'orange' ? 'text-orange-600' :
-                            'text-red-600'
-                          }`}>
-                            {category.percentage_used.toFixed(1)}%
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className={`text-lg font-bold ${
+                              color === 'green' ? 'text-green-600' :
+                              color === 'yellow' ? 'text-yellow-600' :
+                              color === 'orange' ? 'text-orange-600' :
+                              'text-red-600'
+                            }`}>
+                              {category.percentage.toFixed(1)}%
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {isOverBudget ? 'Over budget' : `${currencySymbol}${category.remaining.toFixed(2)} left`}
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {isOverBudget ? 'Over budget' : `${(category.limit - category.spent).toFixed(2)} left`}
-                          </div>
+                          
+                          {!isEditing ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditCategory(category.name, category.budgeted)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className="w-24 h-8"
+                                min="0"
+                                step="0.01"
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSaveCategory(category.name)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Save className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelEdit}
+                                className="h-8 w-8 p-0"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                       
                       <Progress 
-                        value={Math.min(category.percentage_used, 100)} 
+                        value={Math.min(category.percentage, 100)} 
                         className={`h-3 ${
                           color === 'green' ? '[&>div]:bg-green-500' :
                           color === 'yellow' ? '[&>div]:bg-yellow-500' :
@@ -276,12 +348,20 @@ const BudgetPage: React.FC = () => {
                       
                       {isOverBudget && (
                         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                          <strong>Over by ${(category.spent - category.limit).toFixed(2)}</strong> - Consider adjusting spending in this category
+                          <strong>Over by {currencySymbol}{(category.spent - category.budgeted).toFixed(2)}</strong> - Consider adjusting spending in this category
                         </div>
                       )}
                     </div>
                   );
                 })}
+              
+              {budgetCategories.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <DollarSign className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p>No budget categories found</p>
+                  <p className="text-sm">Complete your onboarding to set up budget categories</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -301,9 +381,9 @@ const BudgetPage: React.FC = () => {
                 {overBudgetCategories.length > 0 ? (
                   <ul className="space-y-2 text-sm text-blue-700">
                     {overBudgetCategories.slice(0, 3).map(cat => (
-                      <li key={cat.category} className="flex items-center gap-2">
+                      <li key={cat.name} className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                        <span className="capitalize">{cat.category}</span> - Consider reducing by ${(cat.spent - cat.limit).toFixed(2)}
+                        <span className="capitalize">{cat.name}</span> - Consider reducing by {currencySymbol}{(cat.spent - cat.budgeted).toFixed(2)}
                       </li>
                     ))}
                   </ul>
@@ -319,9 +399,9 @@ const BudgetPage: React.FC = () => {
                 {healthyCategories.length > 0 ? (
                   <ul className="space-y-2 text-sm text-blue-700">
                     {healthyCategories.slice(0, 3).map(cat => (
-                      <li key={cat.category} className="flex items-center gap-2">
+                      <li key={cat.name} className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                        <span className="capitalize">{cat.category}</span> - ${(cat.limit - cat.spent).toFixed(2)} buffer remaining
+                        <span className="capitalize">{cat.name}</span> - {currencySymbol}{cat.remaining.toFixed(2)} buffer remaining
                       </li>
                     ))}
                   </ul>
@@ -334,6 +414,33 @@ const BudgetPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Safe to Spend Reminder */}
+        {safeToSpendData.dailySafeAmount > 0 && (
+          <Card className="border-2 border-green-200 bg-green-50">
+            <CardHeader>
+              <CardTitle className="text-green-800 flex items-center gap-2">
+                💰 Daily Safe Spending
+              </CardTitle>
+              <CardDescription className="text-green-700">
+                Based on your remaining budget and days left in the month
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-700 mb-2">
+                  {currencySymbol}{safeToSpendData.dailySafeAmount.toFixed(2)}
+                </div>
+                <p className="text-green-600">
+                  You can safely spend this much per day for the rest of the month
+                </p>
+                <p className="text-sm text-green-500 mt-1">
+                  {safeToSpendData.daysLeftInMonth} days remaining in {new Date().toLocaleDateString('en-US', { month: 'long' })}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
