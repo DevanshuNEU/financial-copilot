@@ -24,8 +24,7 @@ const Navigation: React.FC = () => {
     { path: '/dashboard', icon: Home, label: 'Dashboard', description: 'Quick overview' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics', description: 'Charts & insights' },
     { path: '/budget', icon: PiggyBank, label: 'Budget', description: 'Manage budgets' },
-    { path: '/expenses', icon: Receipt, label: 'Expenses', description: 'Track spending' },
-    { path: '/settings', icon: Settings, label: 'Settings', description: 'App preferences' }
+    { path: '/expenses', icon: Receipt, label: 'Expenses', description: 'Track spending' }
   ];
 
   // Close dropdown when clicking outside
