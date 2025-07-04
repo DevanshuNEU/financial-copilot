@@ -26,22 +26,30 @@ class SupabaseOnboardingService {
    * Save onboarding data to Supabase
    */
   async saveOnboardingData(data: OnboardingData): Promise<SupabaseOnboardingData> {
+    console.log('💾 Starting saveOnboardingData with:', data)
+    
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      throw new Error('User must be authenticated to save onboarding data')
+      const error = 'User must be authenticated to save onboarding data'
+      console.error('❌', error)
+      throw new Error(error)
     }
+
+    console.log(`👤 Saving for user: ${user.id}`)
 
     const onboardingRecord = {
       user_id: user.id,
-      monthly_budget: data.monthlyBudget,
+      monthly_budget: Number(data.monthlyBudget),
       currency: data.currency,
-      has_meal_plan: data.hasMealPlan,
-      fixed_costs: data.fixedCosts,
-      spending_categories: data.spendingCategories,
+      has_meal_plan: Boolean(data.hasMealPlan),
+      fixed_costs: data.fixedCosts || [],
+      spending_categories: data.spendingCategories || {},
       is_complete: true,
       completed_at: new Date().toISOString()
     }
+
+    console.log('📦 Prepared record:', onboardingRecord)
 
     const { data: savedData, error } = await supabase
       .from('onboarding_data')
@@ -50,9 +58,11 @@ class SupabaseOnboardingService {
       .single()
 
     if (error) {
+      console.error('❌ Supabase save error:', error)
       throw new Error(`Failed to save onboarding data: ${error.message}`)
     }
 
+    console.log('✅ Data saved successfully:', savedData)
     return savedData
   }
 
@@ -63,8 +73,11 @@ class SupabaseOnboardingService {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
+      console.log('❌ No user found - cannot load data')
       return null
     }
+
+    console.log(`🔍 Loading onboarding data for user: ${user.id}`)
 
     const { data, error } = await supabase
       .from('onboarding_data')
@@ -73,22 +86,30 @@ class SupabaseOnboardingService {
       .maybeSingle()
 
     if (error) {
-      console.error('Failed to load onboarding data:', error)
+      console.error('❌ Failed to load onboarding data:', error)
       return null
     }
 
     if (!data) {
+      console.log('❌ No onboarding data found for user')
       return null
     }
 
+    console.log('📊 Raw data from database:', data)
+
     // Convert Supabase format to frontend format
-    return {
+    const convertedData = {
       monthlyBudget: Number(data.monthly_budget),
       currency: data.currency,
-      hasMealPlan: data.has_meal_plan,
-      fixedCosts: data.fixed_costs || [],
-      spendingCategories: data.spending_categories || {}
+      hasMealPlan: Boolean(data.has_meal_plan),
+      fixedCosts: Array.isArray(data.fixed_costs) ? data.fixed_costs : [],
+      spendingCategories: data.spending_categories && typeof data.spending_categories === 'object' 
+        ? data.spending_categories 
+        : {}
     }
+
+    console.log('✅ Converted data for frontend:', convertedData)
+    return convertedData
   }
 
   /**
@@ -98,21 +119,45 @@ class SupabaseOnboardingService {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
+      console.log('❌ No user found - onboarding incomplete')
       return false
     }
 
+    console.log(`🔍 Checking onboarding status for user: ${user.id}`)
+
     const { data, error } = await supabase
       .from('onboarding_data')
-      .select('is_complete')
+      .select('is_complete, monthly_budget, currency, fixed_costs, spending_categories')
       .eq('user_id', user.id)
       .maybeSingle()
 
     if (error) {
-      console.error('Failed to check onboarding status:', error)
+      console.error('❌ Failed to check onboarding status:', error)
       return false
     }
 
-    return data?.is_complete || false
+    if (!data) {
+      console.log('❌ No onboarding data found - user is new')
+      return false
+    }
+
+    console.log('📊 Onboarding data found:', {
+      is_complete: data.is_complete,
+      has_budget: !!data.monthly_budget,
+      has_currency: !!data.currency,
+      has_fixed_costs: Array.isArray(data.fixed_costs) && data.fixed_costs.length > 0,
+      has_spending_categories: !!data.spending_categories && Object.keys(data.spending_categories).length > 0
+    })
+
+    // Check both the flag AND that essential data exists
+    const isComplete = data.is_complete && 
+                      data.monthly_budget && 
+                      data.currency &&
+                      Array.isArray(data.fixed_costs) &&
+                      data.spending_categories
+
+    console.log(`✅ Onboarding complete: ${isComplete}`)
+    return isComplete || false
   }
 
   /**

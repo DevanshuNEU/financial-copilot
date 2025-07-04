@@ -1,13 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSupabaseAuth } from '../contexts/SupabaseAuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import OnboardingWizard from '../components/onboarding/OnboardingWizard';
-import { supabaseOnboardingService, OnboardingData } from '../services/supabaseOnboarding';
+import { financialService } from '../services/financialService';
+import type { OnboardingData } from '../services/financialService';
 import toast from 'react-hot-toast';
 
 const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useSupabaseAuth();
+  const { user } = useAuth();
 
   const handleOnboardingComplete = async (data: OnboardingData) => {
     console.log('🎯 Starting onboarding completion with data:', data);
@@ -19,9 +20,9 @@ const OnboardingPage: React.FC = () => {
     }
 
     try {
-      console.log('💾 Saving onboarding data to Supabase...');
-      // Save to Supabase database
-      await supabaseOnboardingService.saveOnboardingData(data);
+      console.log('💾 Saving onboarding data...');
+      // Save using unified financial service
+      await financialService.saveOnboardingData(data);
       console.log('✅ Onboarding data saved successfully');
       
       // Show success message
@@ -58,16 +59,10 @@ const OnboardingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Background with subtle pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-green-50/20"></div>
-      
-      {/* Content */}
-      <div className="relative z-10">
-        <OnboardingWizard 
-          onComplete={handleOnboardingComplete}
-          onSkip={handleSkipOnboarding}
-        />
-      </div>
+      <OnboardingWizard 
+        onComplete={handleOnboardingComplete}
+        onSkip={handleSkipOnboarding}
+      />
     </div>
   );
 };

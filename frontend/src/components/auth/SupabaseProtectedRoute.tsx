@@ -23,11 +23,21 @@ const SupabaseProtectedRoute: React.FC<SupabaseProtectedRouteProps> = ({
     const checkOnboarding = async () => {
       if (user && requireOnboarding) {
         try {
-          // TEMPORARY: Allow access to dashboard for testing
-          console.log('⚠️ Temporarily allowing dashboard access for testing');
-          setOnboardingComplete(true); // Allow access to dashboard
+          console.log(`🔍 Checking onboarding for user ${user.id}...`)
+          
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Onboarding check timeout')), 10000)
+          )
+          
+          const checkPromise = supabaseOnboardingService.hasCompletedOnboarding()
+          
+          const hasCompleted = await Promise.race([checkPromise, timeoutPromise]) as boolean
+          console.log(`🔍 Onboarding check for user ${user.id}: ${hasCompleted ? 'COMPLETE' : 'INCOMPLETE'}`)
+          setOnboardingComplete(hasCompleted)
         } catch (error) {
           console.error('Error checking onboarding status:', error)
+          // If there's an error or timeout, assume incomplete and redirect to onboarding
           setOnboardingComplete(false)
         } finally {
           setCheckingOnboarding(false)
@@ -67,8 +77,11 @@ const SupabaseProtectedRoute: React.FC<SupabaseProtectedRouteProps> = ({
 
   // If user has onboarding data but is trying to access onboarding again
   if (!requireOnboarding && onboardingComplete === true && location.pathname === '/onboarding') {
+    console.log('🔄 Existing user trying to access onboarding - redirecting to dashboard')
     return <Navigate to="/dashboard" replace />
   }
+
+  console.log(`✅ Allowing access to ${location.pathname} - requireOnboarding: ${requireOnboarding}, onboardingComplete: ${onboardingComplete}`)
 
   return <>{children}</>
 }

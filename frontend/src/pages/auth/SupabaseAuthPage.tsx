@@ -1,7 +1,8 @@
-// Simple Supabase Authentication Page
+// Simple Supabase Authentication Page with Smart User Flow
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSupabaseAuth } from '../../contexts/SupabaseAuthContext'
+import { supabaseOnboardingService } from '../../services/supabaseOnboarding'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -18,13 +19,34 @@ const SupabaseAuthPage: React.FC = () => {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Redirect authenticated users
+  // Smart user flow - redirect authenticated users based on onboarding status
   useEffect(() => {
-    if (user && !loading) {
-      const from = location.state?.from?.pathname || '/onboarding'
-      navigate(from, { replace: true })
+    const handleAuthenticatedUserFlow = async () => {
+      if (user && !loading) {
+        console.log('🔍 Authenticated user detected, checking onboarding status...')
+        
+        try {
+          // Check if user has completed onboarding
+          const hasCompletedOnboarding = await supabaseOnboardingService.hasCompletedOnboarding()
+          
+          if (hasCompletedOnboarding) {
+            console.log('✅ Existing user with onboarding complete → Dashboard')
+            navigate('/dashboard', { replace: true })
+          } else {
+            console.log('🆕 New user without onboarding → Onboarding')
+            navigate('/onboarding', { replace: true })
+          }
+        } catch (error) {
+          console.error('Error checking onboarding status:', error)
+          // Fallback to onboarding if there's an error
+          console.log('⚠️ Error checking status, routing to onboarding as fallback')
+          navigate('/onboarding', { replace: true })
+        }
+      }
     }
-  }, [user, loading, navigate, location.state])
+
+    handleAuthenticatedUserFlow()
+  }, [user, loading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
