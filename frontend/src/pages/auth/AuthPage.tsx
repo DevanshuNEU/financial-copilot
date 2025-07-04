@@ -1,64 +1,103 @@
-// Main authentication page for Financial Copilot
-// Professional design with OAuth and email/password options
+// Unified Authentication Page - Works with both Local and Supabase
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+import { financialService } from '../../services/financialService'
+import { databaseConfig } from '../../config/database'
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import LoginForm from './LoginForm';
-import RegisterForm from './RegisterForm';
-import OAuthButtons from './OAuthButtons';
-
-type AuthMode = 'login' | 'register';
+type AuthMode = 'signin' | 'signup'
 
 const AuthPage: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { signIn, signUp, loading, user } = useAuth()
   
-  const [mode, setMode] = useState<AuthMode>('login');
-  const [error, setError] = useState<string>('');
+  const [mode, setMode] = useState<AuthMode>('signin')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Handle OAuth callback
+  // Smart user flow - redirect authenticated users based on onboarding status
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const token = urlParams.get('token');
-    const oauthError = urlParams.get('error');
-
-    if (oauthError) {
-      setError('Authentication failed. Please try again.');
-      // Clean URL
-      navigate('/auth', { replace: true });
-    } else if (token) {
-      // OAuth success will be handled by AuthContext
-      // Clean URL
-      navigate('/auth', { replace: true });
+    const handleAuthenticatedUserFlow = async () => {
+      if (user && !loading) {
+        console.log('🔍 Authenticated user detected, checking onboarding status...')
+        
+        try {
+          // Check if user has completed onboarding
+          const hasCompletedOnboarding = await financialService.hasCompletedOnboarding()
+          
+          if (hasCompletedOnboarding) {
+            console.log('✅ Existing user with onboarding complete → Dashboard')
+            navigate('/dashboard', { replace: true })
+          } else {
+            console.log('🆕 New user without onboarding → Onboarding')
+            navigate('/onboarding', { replace: true })
+          }
+        } catch (error) {
+          console.error('Error checking onboarding status:', error)
+          // Fallback to onboarding if there's an error
+          console.log('⚠️ Error checking status, routing to onboarding as fallback')
+          navigate('/onboarding', { replace: true })
+        }
+      }
     }
-  }, [location, navigate]);
 
-  // Redirect authenticated users
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      // If user has onboarding data, go to dashboard
-      // Note: This old auth page is deprecated, using SupabaseAuthPage instead
-      // if (user.has_onboarding_data) {
-      //   navigate('/dashboard');
-      // } else {
-      //   // New user, send to onboarding
-      //   navigate('/onboarding');
-      // }
-      navigate('/dashboard'); // Simple redirect for now
+    handleAuthenticatedUserFlow()
+  }, [user, loading, navigate])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsSubmitting(true)
+
+    try {
+      if (mode === 'signup') {
+        await signUp(email, password, firstName, lastName)
+      } else {
+        await signIn(email, password)
+      }
+      
+      // Navigation will be handled by useEffect above
+      
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed')
+    } finally {
+      setIsSubmitting(false)
     }
-  }, [isAuthenticated, user, navigate]);
+  }
 
-  if (isLoading) {
+  // Show loading while checking authentication
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {databaseConfig.mode === 'local' 
+              ? 'Checking local storage...' 
+              : 'Connecting to Supabase...'
+            }
+          </p>
         </div>
       </div>
-    );
+    )
+  }
+
+  // Don't show auth form if user is already authenticated
+  if (user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -80,16 +119,26 @@ const AuthPage: React.FC = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {/* Mode Notice */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              <strong>Mode:</strong> {databaseConfig.mode === 'local' ? 'Local Storage' : 'Supabase Cloud'}
+              {databaseConfig.mode === 'local' && (
+                <span className="block mt-1">Use any email and password to sign in</span>
+              )}
+            </p>
+          </div>
+
           {/* Mode Toggle */}
           <div className="mb-6">
             <div className="flex rounded-lg bg-gray-100 p-1">
               <button
                 onClick={() => {
-                  setMode('login');
-                  setError('');
+                  setMode('signin')
+                  setError('')
                 }}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  mode === 'login'
+                  mode === 'signin'
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -98,11 +147,11 @@ const AuthPage: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setMode('register');
-                  setError('');
+                  setMode('signup')
+                  setError('')
                 }}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  mode === 'register'
+                  mode === 'signup'
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -119,40 +168,97 @@ const AuthPage: React.FC = () => {
             </div>
           )}
 
-          {/* OAuth Buttons */}
-          <OAuthButtons onError={setError} />
-
-          {/* Divider */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'signup' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                    First name
+                  </label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Last name
+                  </label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm"
+                    placeholder="Optional"
+                  />
+                </div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with email</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Auth Forms */}
-          <div className="mt-6">
-            {mode === 'login' ? (
-              <LoginForm onError={setError} />
-            ) : (
-              <RegisterForm onError={setError} />
             )}
-          </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm"
+                placeholder={databaseConfig.mode === 'local' ? 'Enter any email' : 'Enter your email'}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm"
+                placeholder={databaseConfig.mode === 'local' ? 'Enter any password' : (mode === 'signup' ? 'At least 6 characters' : 'Enter your password')}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting || !email || !password}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSubmitting ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : mode === 'signup' ? (
+                'Create Account'
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
 
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500">
-              By continuing, you agree to our Terms of Service and Privacy Policy
+              {databaseConfig.mode === 'local' 
+                ? 'Local mode - your data is stored in browser storage'
+                : 'Your data is securely stored in the cloud'
+              }
             </p>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AuthPage;
+export default AuthPage
