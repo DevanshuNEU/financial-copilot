@@ -4,10 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
+import { useAppData } from '../contexts/AppDataContext';
 import { financialService } from '../services/financialService';
-import type { OnboardingData, PersonalizedSafeToSpend } from '../services/financialService';
-import { SafeToSpendResponse } from '../types';
 import SafeToSpendCard from '../components/dashboard/SafeToSpendCard';
 import FinancialHealthGauge from '../components/dashboard/FinancialHealthGauge';
 import AddExpenseModal from '../components/dashboard/AddExpenseModal';
@@ -20,7 +18,8 @@ import {
   Target,
   Zap,
   Sparkles,
-  Heart
+  Heart,
+  AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -52,69 +51,33 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [safeToSpendData, setSafeToSpendData] = useState<SafeToSpendResponse | null>(null);
-  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
-  const [personalizedData, setPersonalizedData] = useState<PersonalizedSafeToSpend | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { appData, refreshAppData } = useAppData();
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
 
   // Check if user just completed onboarding
   const justCompletedOnboarding = location.state?.onboardingComplete === true;
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      console.log('🔄 Dashboard: Starting data fetch...')
-      
-      // Load onboarding data using unified financial service
-      const userData = await financialService.loadOnboardingData();
-      console.log('📊 Dashboard: Onboarding data loaded:', userData ? 'Found' : 'None')
-      
-      if (userData) {
-        setOnboardingData(userData);
-        setPersonalizedData(financialService.calculatePersonalizedSafeToSpend(userData));
-        setIsNewUser(justCompletedOnboarding);
-        
-        console.log('✅ Dashboard: Data set successfully')
-        
-        // Show celebration toast for new users
-        if (justCompletedOnboarding) {
-          toast.success(
-            `🎉 Welcome to your personalized dashboard! Your ${financialService.getCurrencySymbol(userData.currency)}${userData.monthlyBudget} budget is all set up.`,
-            { duration: 5000 }
-          );
-        }
-      } else {
-        console.log('❌ Dashboard: No onboarding data found')
-        // User hasn't completed onboarding - this shouldn't happen with proper routing
-        // but we'll handle it gracefully
-      }
-      
-      // Still fetch backend data for comparison/fallback
-      try {
-        const safeToSpendResponse = await apiService.getSafeToSpend();
-        setSafeToSpendData(safeToSpendResponse);
-        console.log('✅ Dashboard: Backend API data loaded')
-      } catch (backendError) {
-        console.warn('⚠️ Dashboard: Backend API failed, using onboarding data only:', backendError);
-        // This is okay - we can show personalized data without the backend
-      }
-      
-      setError(null);
-    } catch (err) {
-      console.error('❌ Dashboard: Fetch error:', err)
-      setError('Failed to load your financial data.');
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Extract data from AppDataContext
+  const { 
+    loading, 
+    error, 
+    onboardingData, 
+    safeToSpendData, 
+    totalSpent, 
+    expenses 
+  } = appData;
 
   useEffect(() => {
-    fetchData();
-  }, [justCompletedOnboarding]); // Add justCompletedOnboarding as dependency
+    // Show celebration toast for new users
+    if (justCompletedOnboarding && onboardingData) {
+      setIsNewUser(true);
+      toast.success(
+        `🎉 Welcome to your personalized dashboard! Your ${financialService.getCurrencySymbol(onboardingData.currency)}${onboardingData.monthlyBudget} budget is all set up.`,
+        { duration: 5000 }
+      );
+    }
+  }, [justCompletedOnboarding, onboardingData]);
 
   if (loading) {
     return (
@@ -150,16 +113,30 @@ const DashboardPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center max-w-md mx-auto p-6"
         >
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Zap className="h-8 w-8 text-red-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Connection Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Button 
-            onClick={fetchData}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Load Dashboard</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => refreshAppData()} className="bg-red-600 hover:bg-red-700">
             Try Again
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!onboardingData || !safeToSpendData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-yellow-50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md mx-auto p-6"
+        >
+          <Target className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Setup Required</h2>
+          <p className="text-gray-600 mb-4">Complete your financial setup to view your personalized dashboard.</p>
+          <Button onClick={() => navigate('/onboarding')} className="bg-yellow-600 hover:bg-yellow-700">
+            Complete Setup
           </Button>
         </motion.div>
       </div>
@@ -261,8 +238,8 @@ const DashboardPage: React.FC = () => {
               className="text-gray-600 text-lg"
             >
               {onboardingData 
-                ? personalizedData 
-                  ? `You can safely spend ${financialService.getCurrencySymbol(onboardingData.currency)}${personalizedData.dailySafeAmount.toFixed(0)} per day this month!`
+                ? safeToSpendData 
+                  ? `You can safely spend ${financialService.getCurrencySymbol(onboardingData.currency)}${safeToSpendData.dailySpendingGuide.toFixed(0)} per day this month!`
                   : "Based on your personal budget setup"
                 : "Stay on track with your spending goals"
               }
@@ -308,7 +285,7 @@ const DashboardPage: React.FC = () => {
               <CardContent className="p-0 h-full">
                 <SafeToSpendCard 
                   data={safeToSpendData} 
-                  personalizedData={personalizedData}
+                  personalizedData={null}
                   onboardingData={onboardingData}
                 />
               </CardContent>
@@ -319,7 +296,7 @@ const DashboardPage: React.FC = () => {
               <CardContent className="p-0 h-full">
                 <FinancialHealthGauge 
                   data={safeToSpendData}
-                  personalizedData={personalizedData}
+                  personalizedData={null}
                   onboardingData={onboardingData}
                 />
               </CardContent>
@@ -444,7 +421,7 @@ const DashboardPage: React.FC = () => {
 
       {/* Add Expense Modal - Controlled */}
       <AddExpenseModal 
-        onExpenseAdded={fetchData} 
+        onExpenseAdded={refreshAppData} 
         open={showAddExpenseModal}
         onOpenChange={setShowAddExpenseModal}
       />

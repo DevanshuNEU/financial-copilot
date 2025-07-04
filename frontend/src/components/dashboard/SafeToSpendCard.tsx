@@ -2,19 +2,22 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { SafeToSpendResponse } from '../../types';
-import { OnboardingData, PersonalizedSafeToSpend, supabaseOnboardingService } from '../../services/supabaseOnboarding';
+import { OnboardingData } from '../../types/services';
+import { ExtendedSafeToSpendData } from '../../contexts/AppDataContext';
+import { financialService } from '../../services/financialService';
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface SafeToSpendCardProps {
-  data: SafeToSpendResponse | null;
-  personalizedData?: PersonalizedSafeToSpend | null;
+  data?: SafeToSpendResponse | ExtendedSafeToSpendData | null;
+  personalizedData?: ExtendedSafeToSpendData | null;
   onboardingData?: OnboardingData | null;
 }
 
 const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data, personalizedData, onboardingData }) => {
-  // Use personalized data if available, otherwise fall back to API data
+  // Determine which data source to use
   const usePersonalized = personalizedData && onboardingData;
-  const currencySymbol = onboardingData ? supabaseOnboardingService.getCurrencySymbol(onboardingData.currency) : '$';
+  const useExtendedData = data && 'totalSpent' in data && 'availableAmount' in data; // Check if data is ExtendedSafeToSpendData
+  const currencySymbol = onboardingData ? financialService.getCurrencySymbol(onboardingData.currency) : '$';
   
   if (!data && !usePersonalized) {
     return (
@@ -37,16 +40,26 @@ const SafeToSpendCard: React.FC<SafeToSpendCardProps> = ({ data, personalizedDat
   let remainingBudget: number;
   
   if (usePersonalized) {
-    // Use personalized calculations
+    // Use personalized calculations with actual expenses
     totalBudget = personalizedData!.totalBudget;
-    totalSpent = personalizedData!.totalFixedCosts; // For now, just show fixed costs as "spent"
-    remainingBudget = personalizedData!.availableForSpending;
-    dailySafeAmount = personalizedData!.dailySafeAmount;
+    totalSpent = personalizedData!.totalSpent; // This is the real expenses from user
+    remainingBudget = personalizedData!.availableAmount; // Available after fixed costs AND expenses
+    dailySafeAmount = personalizedData!.dailySpendingGuide; // Daily guide after expenses
     daysLeft = personalizedData!.daysLeftInMonth;
-    budgetUsedPercentage = (totalSpent / totalBudget) * 100;
+    // Budget used = fixed costs + actual expenses
+    budgetUsedPercentage = (personalizedData!.totalFixedCosts + personalizedData!.totalSpent) / totalBudget * 100;
+  } else if (useExtendedData) {
+    // Use ExtendedSafeToSpendData directly from AppDataContext
+    const extendedData = data as ExtendedSafeToSpendData;
+    totalBudget = extendedData.totalBudget;
+    totalSpent = extendedData.totalSpent;
+    remainingBudget = extendedData.availableAmount;
+    dailySafeAmount = extendedData.dailySpendingGuide;
+    daysLeft = extendedData.daysLeftInMonth;
+    budgetUsedPercentage = (extendedData.totalFixedCosts + extendedData.totalSpent) / totalBudget * 100;
   } else {
-    // Use API data
-    const safeToSpendData = data!.safe_to_spend;
+    // Use API data (old format)
+    const safeToSpendData = (data as SafeToSpendResponse)!.safe_to_spend;
     totalBudget = safeToSpendData.total_budget;
     totalSpent = safeToSpendData.total_spent;
     remainingBudget = safeToSpendData.total_budget - safeToSpendData.total_spent;

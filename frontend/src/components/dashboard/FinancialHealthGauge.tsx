@@ -2,18 +2,21 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Target } from 'lucide-react';
 import { SafeToSpendResponse } from '../../types';
-import { OnboardingData, PersonalizedSafeToSpend, supabaseOnboardingService } from '../../services/supabaseOnboarding';
+import { OnboardingData } from '../../types/services';
+import { ExtendedSafeToSpendData } from '../../contexts/AppDataContext';
+import { financialService } from '../../services/financialService';
 
 interface FinancialHealthGaugeProps {
-  data?: SafeToSpendResponse | null;
-  personalizedData?: PersonalizedSafeToSpend | null;
+  data?: SafeToSpendResponse | ExtendedSafeToSpendData | null;
+  personalizedData?: ExtendedSafeToSpendData | null;
   onboardingData?: OnboardingData | null;
 }
 
 const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data, personalizedData, onboardingData }) => {
-  // Use personalized data if available, otherwise fall back to API data
+  // Determine which data source to use
   const usePersonalized = personalizedData && onboardingData;
-  const currencySymbol = onboardingData ? supabaseOnboardingService.getCurrencySymbol(onboardingData.currency) : '$';
+  const useExtendedData = data && 'totalSpent' in data && 'availableAmount' in data;
+  const currencySymbol = onboardingData ? financialService.getCurrencySymbol(onboardingData.currency) : '$';
   
   if (!data && !usePersonalized) {
     return (
@@ -32,18 +35,29 @@ const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data, perso
   let totalSpent: number;
   let dailySafeAmount: number;
   let budgetUsedPercentage: number;
+  let remainingBudget: number;
   
   if (usePersonalized) {
-    // Use personalized calculations
+    // Use personalized calculations with actual expenses
     totalBudget = personalizedData!.totalBudget;
-    totalSpent = personalizedData!.totalFixedCosts; // For now, just show fixed costs as "spent"
-    dailySafeAmount = personalizedData!.dailySafeAmount;
-    budgetUsedPercentage = (totalSpent / totalBudget) * 100;
+    totalSpent = personalizedData!.totalSpent; // Real expenses from user
+    remainingBudget = personalizedData!.availableAmount;
+    dailySafeAmount = personalizedData!.dailySpendingGuide;
+    budgetUsedPercentage = (personalizedData!.totalFixedCosts + personalizedData!.totalSpent) / totalBudget * 100;
+  } else if (useExtendedData) {
+    // Use ExtendedSafeToSpendData directly from AppDataContext
+    const extendedData = data as ExtendedSafeToSpendData;
+    totalBudget = extendedData.totalBudget;
+    totalSpent = extendedData.totalSpent;
+    remainingBudget = extendedData.availableAmount;
+    dailySafeAmount = extendedData.dailySpendingGuide;
+    budgetUsedPercentage = (extendedData.totalFixedCosts + extendedData.totalSpent) / totalBudget * 100;
   } else {
-    // Use API data
-    const safeToSpendData = data!.safe_to_spend;
+    // Use API data (old format)
+    const safeToSpendData = (data as SafeToSpendResponse)!.safe_to_spend;
     totalBudget = safeToSpendData.total_budget;
     totalSpent = safeToSpendData.total_spent;
+    remainingBudget = safeToSpendData.total_budget - safeToSpendData.total_spent;
     dailySafeAmount = safeToSpendData.daily_safe_amount;
     budgetUsedPercentage = (totalSpent / totalBudget) * 100;
   }
@@ -173,7 +187,9 @@ const FinancialHealthGauge: React.FC<FinancialHealthGaugeProps> = ({ data, perso
         >
           <div className="text-center p-3 bg-white/50 rounded-lg border border-green-100/50">
             <div className="text-xl font-bold text-green-600">
-              {currencySymbol}{usePersonalized ? (totalBudget - totalSpent).toFixed(0) : data!.safe_to_spend.discretionary_remaining.toFixed(0)}
+              {currencySymbol}{usePersonalized ? remainingBudget.toFixed(0) : 
+                useExtendedData ? (data as ExtendedSafeToSpendData).availableAmount.toFixed(0) : 
+                (data as SafeToSpendResponse)!.safe_to_spend.discretionary_remaining.toFixed(0)}
             </div>
             <div className="text-sm text-gray-600 font-medium">Safe to Spend</div>
           </div>
