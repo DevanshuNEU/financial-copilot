@@ -18,8 +18,11 @@ import {
   Target,
   Zap,
   Sparkles,
-  Heart,
-  AlertCircle
+  TrendingUp,
+  PiggyBank,
+  Calendar,
+  ChevronRight,
+  Star
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -42,7 +45,7 @@ const itemVariants: Variants = {
     y: 0,
     transition: {
       duration: 0.5,
-      ease: [0.25, 0.1, 0.25, 1] // Cubic bezier for smooth easing
+      ease: [0.25, 0.1, 0.25, 1]
     }
   }
 };
@@ -51,379 +54,333 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { appData, refreshAppData } = useAppData();
+  const { appData } = useAppData();
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
-  const [isNewUser, setIsNewUser] = useState(false);
+  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [personalizedInsights, setPersonalizedInsights] = useState<string[]>([]);
 
-  // Check if user just completed onboarding
-  const justCompletedOnboarding = location.state?.onboardingComplete === true;
+  // Get user's first name or default
+  const getFirstName = () => {
+    return appData.user?.firstName || user?.email?.split('@')[0] || 'Student';
+  };
 
-  // Extract data from AppDataContext
-  const { 
-    loading, 
-    error, 
-    onboardingData, 
-    safeToSpendData, 
-    totalSpent, 
-    expenses 
-  } = appData;
+  // Calculate financial stats
+  const availableAmount = appData.safeToSpendData?.availableAmount || 0;
+  const dailyAmount = appData.safeToSpendData?.dailySafeAmount || 0;
+  const totalBudget = appData.safeToSpendData?.totalBudget || 0;
+  const totalSpent = appData.totalSpent || 0;
+  const budgetUsedPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+
+  // Generate dynamic insights
+  const getSmartInsights = () => {
+    const insights = [];
+    
+    if (budgetUsedPercentage < 50) {
+      insights.push("🎉 Great job! You're staying well within budget this month");
+    } else if (budgetUsedPercentage < 80) {
+      insights.push("⚠️ You've used most of your budget - consider meal prepping to save");
+    } else {
+      insights.push("🚨 Budget alert! Focus on essentials for the rest of the month");
+    }
+
+    if (appData.expenses.length < 5) {
+      insights.push("📊 Track more expenses to get better insights");
+    }
+
+    return insights;
+  };
 
   useEffect(() => {
-    // Show celebration toast for new users
-    if (justCompletedOnboarding && onboardingData) {
-      setIsNewUser(true);
-      toast.success(
-        `🎉 Welcome to your personalized dashboard! Your ${financialService.getCurrencySymbol(onboardingData.currency)}${onboardingData.monthlyBudget} budget is all set up.`,
-        { duration: 5000 }
-      );
+    if (appData.onboardingData) {
+      const message = financialService.getWelcomeMessage(appData.onboardingData);
+      const insights = financialService.getPersonalizedInsights(appData.onboardingData);
+      setWelcomeMessage(message);
+      setPersonalizedInsights(insights);
     }
-  }, [justCompletedOnboarding, onboardingData]);
+  }, [appData.onboardingData]);
 
-  if (loading) {
+  if (appData.loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full mx-auto mb-4"
-          />
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <p className="text-lg font-semibold text-gray-900 mb-2">Financial Copilot</p>
-            <p className="text-gray-600">Loading your financial health...</p>
-          </motion.div>
-        </motion.div>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your financial dashboard...</p>
+        </div>
       </div>
     );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-red-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md mx-auto p-6"
-        >
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Load Dashboard</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => refreshAppData()} className="bg-red-600 hover:bg-red-700">
-            Try Again
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (!onboardingData || !safeToSpendData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-yellow-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md mx-auto p-6"
-        >
-          <Target className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Setup Required</h2>
-          <p className="text-gray-600 mb-4">Complete your financial setup to view your personalized dashboard.</p>
-          <Button onClick={() => navigate('/onboarding')} className="bg-yellow-600 hover:bg-yellow-700">
-            Complete Setup
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Quick action cards
-  const quickActions = [
-    {
-      title: "Add Expense",
-      description: "Track a new purchase",
-      icon: Plus,
-      color: "bg-blue-500",
-      action: () => setShowAddExpenseModal(true)
-    },
-    {
-      title: "View Analytics", 
-      description: "See spending insights",
-      icon: BarChart3,
-      color: "bg-purple-500",
-      action: () => navigate('/analytics')
-    },
-    {
-      title: "Manage Budget",
-      description: "Update your budgets", 
-      icon: Target,
-      color: "bg-green-500",
-      action: () => navigate('/budget')
-    }
-  ];
-
-  // Add onboarding prompt for users who haven't completed setup
-  if (!onboardingData) {
-    quickActions.unshift({
-      title: "Complete Setup",
-      description: "Get personalized dashboard in 2 minutes!",
-      icon: Sparkles,
-      color: "bg-gradient-to-r from-green-500 to-blue-500",
-      action: () => navigate('/onboarding')
-    });
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50/50">
-      {/* Clean Welcome Header - Personalized */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm"
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
+      <motion.div 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            {/* Celebration badge for new users */}
-            {isNewUser && (
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 px-6 py-3 rounded-full text-sm font-medium mb-4 shadow-sm"
-              >
-                <Sparkles className="h-4 w-4" />
-                🎉 Setup Complete! Your personalized dashboard is ready!
-                <Heart className="h-4 w-4 text-red-500" />
-              </motion.div>
-            )}
-            
-            {/* Regular welcome badge */}
-            {!isNewUser && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-                className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-4"
-              >
-                <DollarSign className="h-4 w-4" />
-                {onboardingData ? '👋 Welcome back!' : 'Welcome! 👋'}
-              </motion.div>
-            )}
-            
-            {/* Personalized welcome message */}
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.6 }}
-              className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2"
-            >
-              {onboardingData 
-                ? financialService.getWelcomeMessage(onboardingData)
-                : "Here's your quick financial health check"
-              }
-            </motion.h1>
-            
-            {/* Personalized subtitle */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7, duration: 0.6 }}
-              className="text-gray-600 text-lg"
-            >
-              {onboardingData 
-                ? safeToSpendData 
-                  ? `You can safely spend ${financialService.getCurrencySymbol(onboardingData.currency)}${safeToSpendData.dailySpendingGuide.toFixed(0)} per day this month!`
-                  : "Based on your personal budget setup"
-                : "Stay on track with your spending goals"
-              }
-            </motion.p>
-            
-            {/* Personalized insights for new users */}
-            {isNewUser && onboardingData && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9, duration: 0.6 }}
-                className="mt-4 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto"
-              >
-                {financialService.getPersonalizedInsights(onboardingData).map((insight, index) => (
-                  <span 
-                    key={index}
-                    className="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full"
-                  >
-                    {insight}
-                  </span>
-                ))}
-              </motion.div>
-            )}
+        {/* Modern Hero Section */}
+        <motion.div 
+          className="text-center mb-12"
+          variants={itemVariants}
+        >
+          <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="h-6 w-6 text-yellow-500" />
+              <span className="inline-block px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                Welcome back, {getFirstName()}!
+              </span>
+              <Star className="h-6 w-6 text-yellow-500" />
+            </div>
           </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            You've got{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">
+              ${availableAmount.toFixed(0)}
+            </span>
+            {' '}available
+          </h1>
+          
+          <p className="text-xl text-gray-600 mb-6">
+            From your <span className="font-semibold">${totalBudget}</span> monthly budget
+          </p>
+          
+          <div className="flex items-center justify-center space-x-8 mb-8">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">${dailyAmount.toFixed(0)}</div>
+              <div className="text-sm text-gray-500">Safe per day</div>
+            </div>
+            <div className="w-px h-12 bg-gray-300"></div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{budgetUsedPercentage.toFixed(0)}%</div>
+              <div className="text-sm text-gray-500">Budget used</div>
+            </div>
+          </div>
+
+          {/* Smart Insights Banner */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center mb-3">
+              <Zap className="h-5 w-5 text-amber-500 mr-2" />
+              <span className="font-semibold text-gray-800">Smart Insight</span>
+            </div>
+            <p className="text-gray-700">
+              {getSmartInsights()[0]}
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Main Dashboard Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          {/* Safe to Spend Card */}
+          <motion.div variants={itemVariants} className="lg:col-span-2">
+            <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 overflow-hidden">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-1">
+                <div className="bg-white rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <DollarSign className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Safe to Spend</h3>
+                        <p className="text-sm text-gray-600">Available for discretionary spending</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-green-600">${availableAmount.toFixed(2)}</div>
+                      <div className="text-sm text-gray-500">💎 Available for fun stuff</div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-6">
+                    <div className="bg-gray-50 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-blue-600">${dailyAmount.toFixed(2)}</div>
+                      <div className="text-sm text-gray-600">Today you can spend</div>
+                      <div className="text-xs text-gray-500 mt-1">Based on 28 days remaining</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold text-purple-600">${(availableAmount / 7).toFixed(0)}</div>
+                      <div className="text-sm text-gray-600">Weekly budget</div>
+                      <div className="text-xs text-gray-500 mt-1">Avg. per week</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Financial Health Gauge */}
+          <motion.div variants={itemVariants}>
+            <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 h-full">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Target className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Financial Health</h3>
+                      <p className="text-sm text-gray-600">Watch your spending closely</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-center py-8">
+                  <FinancialHealthGauge />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-green-600">${availableAmount.toFixed(0)}</div>
+                    <div className="text-xs text-gray-500">Safe to Spend</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-blue-600">${dailyAmount.toFixed(0)}</div>
+                    <div className="text-xs text-gray-500">Per Day</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
+
+        {/* Budget Summary */}
+        <motion.div variants={itemVariants} className="mb-12">
+          <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">${totalBudget.toFixed(2)}</div>
+                  <div className="text-sm text-gray-600">Total Budget</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">${totalSpent.toFixed(2)}</div>
+                  <div className="text-sm text-gray-600">Total Spent</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">${(totalBudget - totalSpent).toFixed(2)}</div>
+                  <div className="text-sm text-gray-600">Remaining</div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-600">Budget used</span>
+                  <span className="text-sm font-medium text-blue-600">{budgetUsedPercentage.toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(budgetUsedPercentage, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Quick Actions - Modern CTA Section */}
+        <motion.div variants={itemVariants} className="mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Quick Actions</h2>
+            <p className="text-gray-600">Manage your finances with one click</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Add Expense */}
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button 
+                onClick={() => setShowAddExpenseModal(true)}
+                className="w-full h-24 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg"
+              >
+                <div className="flex flex-col items-center space-y-2">
+                  <Plus className="h-6 w-6" />
+                  <span className="font-medium">Add Expense</span>
+                </div>
+              </Button>
+            </motion.div>
+
+            {/* View Analytics */}
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button 
+                onClick={() => navigate('/analytics')}
+                variant="outline"
+                className="w-full h-24 bg-white/80 hover:bg-white border-2 border-blue-200 hover:border-blue-300 shadow-lg"
+              >
+                <div className="flex flex-col items-center space-y-2">
+                  <BarChart3 className="h-6 w-6 text-blue-600" />
+                  <span className="font-medium text-gray-700">View Analytics</span>
+                </div>
+              </Button>
+            </motion.div>
+
+            {/* Manage Budget */}
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button 
+                onClick={() => navigate('/budget')}
+                variant="outline"
+                className="w-full h-24 bg-white/80 hover:bg-white border-2 border-purple-200 hover:border-purple-300 shadow-lg"
+              >
+                <div className="flex flex-col items-center space-y-2">
+                  <PiggyBank className="h-6 w-6 text-purple-600" />
+                  <span className="font-medium text-gray-700">Manage Budget</span>
+                </div>
+              </Button>
+            </motion.div>
+
+            {/* View Expenses */}
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button 
+                onClick={() => navigate('/expenses')}
+                variant="outline"
+                className="w-full h-24 bg-white/80 hover:bg-white border-2 border-orange-200 hover:border-orange-300 shadow-lg"
+              >
+                <div className="flex flex-col items-center space-y-2">
+                  <Receipt className="h-6 w-6 text-orange-600" />
+                  <span className="font-medium text-gray-700">View Expenses</span>
+                </div>
+              </Button>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Navigation Hint */}
+        <motion.div 
+          variants={itemVariants}
+          className="text-center"
+        >
+          <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-white/20">
+            <div className="flex items-center justify-center space-x-2 mb-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              <span className="font-semibold text-gray-800">Pro Tip</span>
+            </div>
+            <p className="text-gray-700">
+              Track your expenses regularly to get the most accurate spending insights and stay on budget! 💡
+            </p>
+          </div>
+        </motion.div>
       </motion.div>
 
-      {/* Main Content with clean spacing */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-8"
-        >
-          {/* Primary Cards Row - Perfect Symmetry */}
-          <motion.div 
-            variants={itemVariants} 
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-          >
-            {/* Safe to Spend - Clean and Minimal */}
-            <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
-              <CardContent className="p-0 h-full">
-                <SafeToSpendCard 
-                  data={safeToSpendData} 
-                  personalizedData={null}
-                  onboardingData={onboardingData}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Financial Health - Matching Height */}
-            <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
-              <CardContent className="p-0 h-full">
-                <FinancialHealthGauge 
-                  data={safeToSpendData}
-                  personalizedData={null}
-                  onboardingData={onboardingData}
-                />
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Quick Actions - Clean and Minimal */}
-          <motion.div variants={itemVariants}>
-            <motion.div 
-              className="text-center mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Quick Actions</h2>
-              <p className="text-gray-600">Manage your finances with one click</p>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {quickActions.map((action, index) => {
-                const IconComponent = action.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 + index * 0.1 }}
-                    className="cursor-pointer"
-                    onClick={action.action}
-                  >
-                    <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-all duration-200 group">
-                      <CardContent className="p-6 text-center">
-                        <div className={`${action.color} w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:shadow-md transition-shadow ${action.title === 'Complete Setup' ? 'text-white' : ''}`}>
-                          <IconComponent className="h-6 w-6 text-white" />
-                        </div>
-                        <h3 className={`font-semibold mb-1 group-hover:text-green-600 transition-colors ${action.title === 'Complete Setup' ? 'text-green-700 font-bold' : 'text-gray-900'}`}>
-                          {action.title}
-                        </h3>
-                        <p className={`text-sm ${action.title === 'Complete Setup' ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                          {action.description}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-
-          {/* Navigation Cards - Matching Quick Actions Style */}
-          <motion.div variants={itemVariants}>
-            <motion.div 
-              className="text-center mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Explore More</h2>
-              <p className="text-gray-600">Dive deeper into your financial data</p>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="cursor-pointer"
-                onClick={() => navigate('/analytics')}
-              >
-                <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-all duration-200 group">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
-                        <BarChart3 className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
-                            Analytics & Insights
-                          </h3>
-                          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all duration-200" />
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          Understand your spending patterns with beautiful charts and detailed analysis.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="cursor-pointer"
-                onClick={() => navigate('/expenses')}
-              >
-                <Card className="border-0 bg-white shadow-sm hover:shadow-md transition-all duration-200 group">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
-                        <Receipt className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                            Expense Management
-                          </h3>
-                          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all duration-200" />
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          View, edit, and organize all your expenses in one convenient location.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </div>
-
-      {/* Add Expense Modal - Controlled */}
+      {/* Add Expense Modal */}
       <AddExpenseModal 
-        onExpenseAdded={refreshAppData} 
         open={showAddExpenseModal}
         onOpenChange={setShowAddExpenseModal}
+        onExpenseAdded={() => {
+          setShowAddExpenseModal(false);
+          toast.success('Expense added successfully!');
+        }}
       />
     </div>
   );
