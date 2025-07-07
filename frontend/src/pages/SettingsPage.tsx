@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -11,9 +11,11 @@ import {
   Github
 } from 'lucide-react';
 import { useAppData } from '../contexts/AppDataContext';
+import EditProfileModal from '../components/settings/EditProfileModal';
 
 const SettingsPage: React.FC = () => {
   const { appData } = useAppData();
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   
   // Show loading state while data is loading
   if (appData.loading) {
@@ -32,8 +34,8 @@ const SettingsPage: React.FC = () => {
   // Extract user data with fallbacks
   const userEmail = appData.user?.email || 'Unknown User';
   const studentType = appData.user?.studentType || 'international';
-  const totalBudget = appData.onboardingData?.totalBudget || 0;
-  const currency = appData.user?.preferences?.currency || 'USD';
+  const monthlyBudget = appData.onboardingData?.monthlyBudget || 0;
+  const currency = appData.user?.preferences?.currency || appData.onboardingData?.currency || 'USD';
   const notifications = appData.user?.preferences?.notifications || {
     budgetWarnings: true,
     dailySummaries: false,
@@ -51,6 +53,19 @@ const SettingsPage: React.FC = () => {
       style: 'currency',
       currency: currency
     }).format(amount);
+  };
+
+  // Get display name
+  const getDisplayName = () => {
+    const firstName = appData.user?.firstName;
+    const lastName = appData.user?.lastName;
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    if (firstName) {
+      return firstName;
+    }
+    return 'Student';
   };
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -82,8 +97,9 @@ const SettingsPage: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-2">Student Profile</p>
-                <p className="font-medium">{getStudentTypeDisplay(studentType)}</p>
-                <p className="text-sm text-gray-500">Monthly Budget: {formatBudget(totalBudget)}</p>
+                <p className="font-medium">{getDisplayName()}</p>
+                <p className="text-sm text-gray-500">{getStudentTypeDisplay(studentType)}</p>
+                <p className="text-sm text-gray-500">Monthly Budget: {formatBudget(monthlyBudget)}</p>
                 {appData.user?.university && (
                   <p className="text-xs text-gray-400 mt-1">{appData.user.university}</p>
                 )}
@@ -94,8 +110,12 @@ const SettingsPage: React.FC = () => {
                   Signed in • {appData.lastSyncAt ? `Last sync: ${new Date(appData.lastSyncAt).toLocaleString()}` : 'Local data'}
                 </p>
               </div>
-              <Button variant="outline" className="w-full" disabled>
-                Edit Profile (Coming Soon)
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => setIsEditProfileOpen(true)}
+              >
+                Edit Profile
               </Button>
             </CardContent>
           </Card>
@@ -245,6 +265,12 @@ const SettingsPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal 
+        isOpen={isEditProfileOpen} 
+        onClose={() => setIsEditProfileOpen(false)} 
+      />
     </div>
   );
 };
