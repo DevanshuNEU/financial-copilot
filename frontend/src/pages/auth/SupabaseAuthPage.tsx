@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSupabaseAuth } from '../../contexts/authContext.supabase'
-import { supabaseOnboardingService } from '../../services/supabaseOnboarding'
+import { financialService } from '../../services/financialService'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -27,7 +27,7 @@ const SupabaseAuthPage: React.FC = () => {
         
         try {
           // Check if user has completed onboarding
-          const hasCompletedOnboarding = await supabaseOnboardingService.hasCompletedOnboarding()
+          const hasCompletedOnboarding = await financialService.hasCompletedOnboarding()
           
           if (hasCompletedOnboarding) {
             console.log('✅ Existing user with onboarding complete → Dashboard')

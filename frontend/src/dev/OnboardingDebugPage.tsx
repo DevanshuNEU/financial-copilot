@@ -3,7 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSupabaseAuth } from '../contexts/authContext.supabase';
-import { supabaseOnboardingService, OnboardingData, PersonalizedSafeToSpend } from '../services/supabaseOnboarding';
+import { financialService } from '../services/financialService';
+import type { OnboardingData, PersonalizedSafeToSpend } from '../types/services';
 
 const OnboardingDebugPage: React.FC = () => {
   const { user } = useSupabaseAuth();
@@ -22,19 +23,19 @@ const OnboardingDebugPage: React.FC = () => {
       setLoading(true);
       
       // Load onboarding data
-      const onboardingData = await supabaseOnboardingService.loadOnboardingData();
+      const onboardingData = await financialService.loadOnboardingData();
       setData(onboardingData);
       
       // Calculate personalized data if we have onboarding data
       if (onboardingData) {
-        const personalizedInfo = supabaseOnboardingService.calculatePersonalizedSafeToSpend(onboardingData);
+        const personalizedInfo = financialService.calculatePersonalizedSafeToSpend(onboardingData);
         setPersonalizedData(personalizedInfo);
       } else {
         setPersonalizedData(null);
       }
       
       // Check completion status
-      const completed = await supabaseOnboardingService.hasCompletedOnboarding();
+      const completed = await financialService.hasCompletedOnboarding();
       setHasCompleted(completed);
       
     } catch (error) {
@@ -50,7 +51,7 @@ const OnboardingDebugPage: React.FC = () => {
 
   const clearData = async () => {
     try {
-      await supabaseOnboardingService.clearOnboardingData();
+      await financialService.clearOnboardingData();
       await loadData(); // Refresh after clearing
     } catch (error) {
       console.error('Failed to clear data:', error);
@@ -151,7 +152,7 @@ const OnboardingDebugPage: React.FC = () => {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-blue-600 font-medium">Total Budget</p>
                   <p className="text-2xl font-bold text-blue-900">
-                    {supabaseOnboardingService.getCurrencySymbol(personalizedData.currency)}
+                    {financialService.getCurrencySymbol(personalizedData.currency)}
                     {personalizedData.totalBudget.toFixed(2)}
                   </p>
                 </div>
@@ -159,7 +160,7 @@ const OnboardingDebugPage: React.FC = () => {
                 <div className="bg-red-50 p-4 rounded-lg">
                   <p className="text-sm text-red-600 font-medium">Fixed Costs</p>
                   <p className="text-2xl font-bold text-red-900">
-                    {supabaseOnboardingService.getCurrencySymbol(personalizedData.currency)}
+                    {financialService.getCurrencySymbol(personalizedData.currency)}
                     {personalizedData.totalFixedCosts.toFixed(2)}
                   </p>
                 </div>
@@ -167,7 +168,7 @@ const OnboardingDebugPage: React.FC = () => {
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="text-sm text-green-600 font-medium">Available</p>
                   <p className="text-2xl font-bold text-green-900">
-                    {supabaseOnboardingService.getCurrencySymbol(personalizedData.currency)}
+                    {financialService.getCurrencySymbol(personalizedData.currency)}
                     {personalizedData.availableForSpending.toFixed(2)}
                   </p>
                 </div>
@@ -175,7 +176,7 @@ const OnboardingDebugPage: React.FC = () => {
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <p className="text-sm text-purple-600 font-medium">Daily Safe</p>
                   <p className="text-2xl font-bold text-purple-900">
-                    {supabaseOnboardingService.getCurrencySymbol(personalizedData.currency)}
+                    {financialService.getCurrencySymbol(personalizedData.currency)}
                     {personalizedData.dailySafeAmount.toFixed(2)}
                   </p>
                 </div>
@@ -207,7 +208,7 @@ const OnboardingDebugPage: React.FC = () => {
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="text-sm text-green-600 font-medium mb-1">Welcome Message</p>
                   <p className="text-lg text-green-900">
-                    {supabaseOnboardingService.getWelcomeMessage(data)}
+                    {financialService.getWelcomeMessage(data)}
                   </p>
                 </div>
               </CardContent>
@@ -218,7 +219,7 @@ const OnboardingDebugPage: React.FC = () => {
               <CardContent className="p-6">
                 <p className="text-sm text-gray-600 font-medium">Personalized Insights</p>
                 <div className="flex flex-wrap gap-2">
-                  {supabaseOnboardingService.getPersonalizedInsights(data).map((insight, index) => (
+                  {financialService.getPersonalizedInsights(data).map((insight, index) => (
                     <Badge key={index} variant="outline" className="text-sm">
                       {insight}
                     </Badge>

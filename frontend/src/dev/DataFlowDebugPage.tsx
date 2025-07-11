@@ -1,7 +1,8 @@
 // Data Flow Debug Page - Test all persistence and user flow logic
 import React, { useState, useEffect } from 'react'
 import { useSupabaseAuth } from '../contexts/authContext.supabase'
-import { supabaseOnboardingService, OnboardingData } from '../services/supabaseOnboarding'
+import { financialService } from '../services/financialService';
+import type { OnboardingData } from '../types/services';
 import { checkDatabaseState } from '../utils/dbCheck'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,12 +48,12 @@ const DataFlowDebugPage: React.FC = () => {
       
       try {
         // Check onboarding completion
-        const isComplete = await supabaseOnboardingService.hasCompletedOnboarding()
+        const isComplete = await financialService.hasCompletedOnboarding()
         setOnboardingComplete(isComplete)
         addLog(`📋 Onboarding complete: ${isComplete}`)
 
         // Load current data
-        const data = await supabaseOnboardingService.loadOnboardingData()
+        const data = await financialService.loadOnboardingData()
         setCurrentData(data)
         addLog(`📊 Current data: ${data ? 'Found' : 'None'}`)
         
@@ -85,12 +86,11 @@ const DataFlowDebugPage: React.FC = () => {
     addLog('🧪 Testing data save...')
 
     try {
-      const savedData = await supabaseOnboardingService.saveOnboardingData(sampleOnboardingData)
+      await financialService.saveOnboardingData(sampleOnboardingData)
       addLog('✅ Data saved successfully')
-      addLog(`📦 Saved data ID: ${savedData.id}`)
       
       // Reload to verify
-      const reloadedData = await supabaseOnboardingService.loadOnboardingData()
+      const reloadedData = await financialService.loadOnboardingData()
       if (reloadedData) {
         setCurrentData(reloadedData)
         addLog('✅ Data reload successful')
@@ -100,7 +100,7 @@ const DataFlowDebugPage: React.FC = () => {
       }
 
       // Check completion status
-      const isComplete = await supabaseOnboardingService.hasCompletedOnboarding()
+      const isComplete = await financialService.hasCompletedOnboarding()
       setOnboardingComplete(isComplete)
       addLog(`📋 Onboarding now complete: ${isComplete}`)
       
@@ -121,16 +121,16 @@ const DataFlowDebugPage: React.FC = () => {
     addLog('🗑️ Testing data clear...')
 
     try {
-      await supabaseOnboardingService.clearOnboardingData()
+      await financialService.clearOnboardingData()
       addLog('✅ Data cleared successfully')
       
       // Reload to verify
-      const reloadedData = await supabaseOnboardingService.loadOnboardingData()
+      const reloadedData = await financialService.loadOnboardingData()
       setCurrentData(reloadedData)
       addLog(`📊 Data after clear: ${reloadedData ? 'Still exists' : 'Cleared'}`)
 
       // Check completion status
-      const isComplete = await supabaseOnboardingService.hasCompletedOnboarding()
+      const isComplete = await financialService.hasCompletedOnboarding()
       setOnboardingComplete(isComplete)
       addLog(`📋 Onboarding complete after clear: ${isComplete}`)
       

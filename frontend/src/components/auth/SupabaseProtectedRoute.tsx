@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useSupabaseAuth } from '../../contexts/authContext.supabase'
-import { supabaseOnboardingService } from '../../services/supabaseOnboarding'
+import { financialService } from '../../services/financialService'
 
 interface SupabaseProtectedRouteProps {
   children: React.ReactNode
@@ -30,7 +30,7 @@ const SupabaseProtectedRoute: React.FC<SupabaseProtectedRouteProps> = ({
             setTimeout(() => reject(new Error('Onboarding check timeout')), 10000)
           )
           
-          const checkPromise = supabaseOnboardingService.hasCompletedOnboarding()
+          const checkPromise = financialService.hasCompletedOnboarding()
           
           const hasCompleted = await Promise.race([checkPromise, timeoutPromise]) as boolean
           console.log(`🔍 Onboarding check for user ${user.id}: ${hasCompleted ? 'COMPLETE' : 'INCOMPLETE'}`)
