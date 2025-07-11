@@ -121,11 +121,6 @@ const SpendingCategoriesStep: React.FC<SpendingCategoriesStepProps> = ({
     });
   };
 
-  const completeSetup = () => {
-    onUpdate({ spendingCategories: categories });
-    onNext();
-  };
-
   return (
     <div className="space-y-8">
       {/* Header */}

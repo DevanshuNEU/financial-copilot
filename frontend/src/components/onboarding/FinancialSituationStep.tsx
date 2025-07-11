@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -83,31 +82,6 @@ const FinancialSituationStep: React.FC<FinancialSituationStepProps> = ({
       currency,
       hasMealPlan: newHasMealPlan
     });
-  };
-
-  const validateAndContinue = () => {
-    const newErrors: Record<string, string> = {};
-    
-    const budget = parseFloat(monthlyBudget.toString());
-    if (!monthlyBudget || isNaN(budget) || budget <= 0) {
-      newErrors.monthlyBudget = 'Please enter a valid monthly budget';
-    } else if (budget < 100) {
-      newErrors.monthlyBudget = 'Budget seems too low - try a realistic amount';
-    } else if (budget > 10000) {
-      newErrors.monthlyBudget = 'Budget seems too high - please double-check';
-    }
-
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length === 0) {
-      const updatedData = {
-        monthlyBudget: budget,
-        currency,
-        hasMealPlan
-      };
-      onUpdate(updatedData);
-      onNext();
-    }
   };
 
   return (

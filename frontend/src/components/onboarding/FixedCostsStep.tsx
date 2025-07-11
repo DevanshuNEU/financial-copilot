@@ -116,11 +116,6 @@ const FixedCostsStep: React.FC<FixedCostsStepProps> = ({
     }
   };
 
-  const continueToNext = () => {
-    onUpdate({ fixedCosts });
-    onNext();
-  };
-
   const isQuickCostAdded = (costName: string) => {
     return fixedCosts.some(cost => cost.name === costName);
   };
