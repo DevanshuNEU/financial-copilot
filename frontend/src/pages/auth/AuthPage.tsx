@@ -1,6 +1,6 @@
 // Unified Authentication Page - Works with both Local and Supabase
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { financialService } from '../../services/financialService'
 import { databaseConfig } from '../../config/database'
@@ -9,7 +9,6 @@ type AuthMode = 'signin' | 'signup'
 
 const AuthPage: React.FC = () => {
   const navigate = useNavigate()
-  const location = useLocation()
   const { signIn, signUp, loading, user } = useAuth()
   
   const [mode, setMode] = useState<AuthMode>('signin')

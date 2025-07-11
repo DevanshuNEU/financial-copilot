@@ -14,7 +14,6 @@ import {
   BarChart3, 
   AlertCircle,
   Zap,
-  ArrowRight,
   DollarSign,
   ShoppingBag,
   Coffee,
@@ -30,7 +29,7 @@ import {
 const AnalyticsPage: React.FC = () => {
   const navigate = useNavigate();
   const { appData } = useAppData();
-  const { loading, error, expenses, budgetCategories, totalSpent, onboardingData, safeToSpendData } = appData;
+  const { loading, error, expenses, totalSpent, safeToSpendData } = appData;
 
   // Get user's first name or default
   const getFirstName = () => {

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,6 @@ import AddExpenseModal from '../components/dashboard/AddExpenseModal';
 import { 
   Plus,
   TrendingUp,
-  TrendingDown,
   Sparkles,
   Zap,
   Target,
@@ -18,7 +17,6 @@ import {
   Eye,
   BarChart3,
   Receipt,
-  PiggyBank,
   ArrowRight,
   Coffee,
   Car,
@@ -27,12 +25,7 @@ import {
   Gamepad2,
   DollarSign,
   Waves,
-  Circle,
-  Triangle,
-  Square,
-  ChevronRight,
-  Calendar,
-  Wallet
+  Calendar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
