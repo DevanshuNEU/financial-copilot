@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,10 +36,10 @@ const DashboardPage: React.FC = () => {
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [selectedInsight, setSelectedInsight] = useState(0);
   
-  // Get user's first name
-  const getFirstName = () => {
+  // Get user's first name - memoized to prevent recalculation
+  const getFirstName = useCallback(() => {
     return appData.user?.firstName || user?.email?.split('@')[0] || 'Student';
-  };
+  }, [appData.user?.firstName, user?.email]);
 
   // Financial calculations with enhanced metrics
   const financialData = useMemo(() => {
@@ -75,8 +75,8 @@ const DashboardPage: React.FC = () => {
     };
   }, [appData.safeToSpendData, appData.totalSpent]);
 
-  // Get category icon
-  const getCategoryIcon = (category: string) => {
+  // Get category icon - memoized to prevent recreation
+  const getCategoryIcon = useCallback((category: string) => {
     const iconMap: Record<string, any> = {
       'Food': Coffee,
       'Transportation': Car,
@@ -86,10 +86,10 @@ const DashboardPage: React.FC = () => {
       'Other': DollarSign
     };
     return iconMap[category] || DollarSign;
-  };
+  }, []);
 
-  // Dynamic insights that rotate
-  const dynamicInsights = [
+  // Dynamic insights that rotate - memoized for performance
+  const dynamicInsights = useMemo(() => [
     {
       title: "Spending Velocity",
       value: `${financialData.spendingVelocity.toFixed(1)}x`,
@@ -111,10 +111,33 @@ const DashboardPage: React.FC = () => {
       status: "neutral",
       icon: Calendar
     }
-  ];
+  ], [financialData.spendingVelocity, financialData.healthScore, financialData.monthProgress]);
 
-  // Recent transactions
-  const recentTransactions = appData.expenses.slice(-4).reverse();
+  // Recent transactions - memoized to prevent recalculation
+  const recentTransactions = useMemo(() => 
+    appData.expenses.slice(-4).reverse(), 
+    [appData.expenses]
+  );
+
+  // Memoized event handlers for better performance
+  const handleAddExpense = useCallback(() => {
+    setShowAddExpenseModal(true);
+  }, []);
+
+  const handleCloseExpenseModal = useCallback(() => {
+    setShowAddExpenseModal(false);
+  }, []);
+
+  const handleExpenseAdded = useCallback(() => {
+    setShowAddExpenseModal(false);
+    // The AppDataContext will automatically refresh the data
+  }, []);
+
+  const handleInsightNext = useCallback(() => {
+    setSelectedInsight((prev) => (prev + 1) % dynamicInsights.length);
+  }, [dynamicInsights.length]);
+
+  const currentInsight = dynamicInsights[selectedInsight];
 
   if (appData.loading) {
     return (
@@ -134,8 +157,6 @@ const DashboardPage: React.FC = () => {
       </div>
     );
   }
-
-  const currentInsight = dynamicInsights[selectedInsight];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -188,7 +209,7 @@ const DashboardPage: React.FC = () => {
             className="flex justify-center"
           >
             <motion.button
-              onClick={() => setSelectedInsight((prev) => (prev + 1) % dynamicInsights.length)}
+              onClick={handleInsightNext}
               className="bg-white rounded-2xl px-8 py-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.98 }}
@@ -262,7 +283,7 @@ const DashboardPage: React.FC = () => {
                   </div>
 
                   <Button
-                    onClick={() => setShowAddExpenseModal(true)}
+                    onClick={handleAddExpense}
                     className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-semibold"
                   >
                     <Plus className="h-5 w-5 mr-2" />
@@ -446,7 +467,7 @@ const DashboardPage: React.FC = () => {
                   borderClass: "border-green-100 hover:border-green-200",
                   iconClass: "text-green-600",
                   textClass: "text-green-900",
-                  onClick: () => setShowAddExpenseModal(true) 
+                  onClick: handleAddExpense 
                 },
                 { 
                   icon: BarChart3, 
@@ -531,14 +552,13 @@ const DashboardPage: React.FC = () => {
       {/* Add Expense Modal */}
       <AddExpenseModal
         open={showAddExpenseModal}
-        onOpenChange={setShowAddExpenseModal}
-        onExpenseAdded={() => {
-          setShowAddExpenseModal(false);
-          // The AppDataContext will automatically refresh the data
-        }}
+        onOpenChange={handleCloseExpenseModal}
+        onExpenseAdded={handleExpenseAdded}
       />
     </div>
   );
 };
 
-export default DashboardPage;
+DashboardPage.displayName = 'DashboardPage';
+
+export default React.memo(DashboardPage);

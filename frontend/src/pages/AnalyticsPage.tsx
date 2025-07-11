@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,10 +31,10 @@ const AnalyticsPage: React.FC = () => {
   const { appData } = useAppData();
   const { loading, error, expenses, totalSpent, safeToSpendData } = appData;
 
-  // Get user's first name or default
-  const getFirstName = () => {
+  // Get user's first name or default - memoized
+  const getFirstName = useCallback(() => {
     return appData.user?.firstName || appData.user?.email?.split('@')[0] || 'Student';
-  };
+  }, [appData.user?.firstName, appData.user?.email]);
 
   // Calculate analytics data
   const analytics = useMemo(() => {
@@ -72,8 +72,8 @@ const AnalyticsPage: React.FC = () => {
     };
   }, [expenses, totalSpent, safeToSpendData]);
 
-  // Get category icon
-  const getCategoryIcon = (category: string) => {
+  // Get category icon - memoized
+  const getCategoryIcon = useCallback((category: string) => {
     const iconMap: Record<string, any> = {
       'Food': Coffee,
       'Transportation': Car,
@@ -83,15 +83,17 @@ const AnalyticsPage: React.FC = () => {
       'Other': DollarSign
     };
     return iconMap[category] || DollarSign;
-  };
+  }, []);
 
-  // Get health status
-  const getHealthStatus = () => {
+  // Get health status - memoized
+  const getHealthStatus = useCallback(() => {
     if (analytics.budgetUsed < 50) return { label: 'Excellent', color: 'text-green-600', bg: 'bg-green-50' };
     if (analytics.budgetUsed < 75) return { label: 'Good', color: 'text-blue-600', bg: 'bg-blue-50' };
     if (analytics.budgetUsed < 90) return { label: 'Caution', color: 'text-yellow-600', bg: 'bg-yellow-50' };
     return { label: 'Critical', color: 'text-red-600', bg: 'bg-red-50' };
-  };
+  }, [analytics.budgetUsed]);
+
+  const healthStatus = useMemo(() => getHealthStatus(), [getHealthStatus]);
 
   if (loading) {
     return (
@@ -126,8 +128,6 @@ const AnalyticsPage: React.FC = () => {
       </div>
     );
   }
-
-  const healthStatus = getHealthStatus();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -502,4 +502,6 @@ const AnalyticsPage: React.FC = () => {
   );
 };
 
-export default AnalyticsPage;
+AnalyticsPage.displayName = 'AnalyticsPage';
+
+export default React.memo(AnalyticsPage);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -71,7 +71,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const validateForm = (): boolean => {
+  const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
 
     // Validate amount
@@ -98,9 +98,9 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData.amount, formData.category, formData.description]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
       amount: '',
       category: '',
@@ -108,7 +108,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       vendor: '',
     });
     setErrors({});
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -275,4 +275,6 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   );
 };
 
-export default AddExpenseModal;
+AddExpenseModal.displayName = 'AddExpenseModal';
+
+export default React.memo(AddExpenseModal);

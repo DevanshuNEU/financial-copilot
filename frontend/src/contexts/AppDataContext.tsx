@@ -1,5 +1,5 @@
 // Global App Data Context - Unified state management for Financial Copilot
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react'
 import { useAuth } from './AuthContext'
 import { financialService } from '../services/financialService'
 import type { OnboardingData, PersonalizedSafeToSpend } from '../types/services'
@@ -119,7 +119,20 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, authUser])
 
-  const refreshAppData = async (): Promise<void> => {
+  const loadUserExpenses = useCallback((): UserExpense[] => {
+    try {
+      const stored = localStorage.getItem(`financial_copilot_expenses_${authUser?.id}`)
+      if (!stored) return []
+
+      const expenses = JSON.parse(stored)
+      return Array.isArray(expenses) ? expenses : []
+    } catch (error) {
+      console.error('Failed to load expenses:', error)
+      return []
+    }
+  }, [authUser?.id])
+
+  const refreshAppData = useCallback(async (): Promise<void> => {
     if (!authUser) return
 
     setAppData(prev => ({ ...prev, loading: true, error: null }))
@@ -212,28 +225,15 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         error: error instanceof Error ? error.message : 'Failed to load data'
       }))
     }
-  }
+  }, [authUser, loadUserExpenses])
 
-  const loadUserExpenses = (): UserExpense[] => {
-    try {
-      const stored = localStorage.getItem(`financial_copilot_expenses_${authUser?.id}`)
-      if (!stored) return []
-
-      const expenses = JSON.parse(stored)
-      return Array.isArray(expenses) ? expenses : []
-    } catch (error) {
-      console.error('Failed to load expenses:', error)
-      return []
-    }
-  }
-
-  const saveUserExpenses = (expenses: UserExpense[]): void => {
+  const saveUserExpenses = useCallback((expenses: UserExpense[]): void => {
     try {
       localStorage.setItem(`financial_copilot_expenses_${authUser?.id}`, JSON.stringify(expenses))
     } catch (error) {
       console.error('Failed to save expenses:', error)
     }
-  }
+  }, [authUser?.id])
 
   const calculateBudgetCategories = (onboarding: OnboardingData, expenses: UserExpense[]): UserBudgetCategory[] => {
     const categories: UserBudgetCategory[] = []
@@ -256,7 +256,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     return categories
   }
 
-  const addExpense = async (expenseData: Omit<UserExpense, 'id' | 'createdAt'>): Promise<void> => {
+  const addExpense = useCallback(async (expenseData: Omit<UserExpense, 'id' | 'createdAt'>): Promise<void> => {
     if (!authUser) throw new Error('User not authenticated')
 
     const newExpense: UserExpense = {
@@ -272,9 +272,9 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
 
     // Recalculate everything
     await refreshAppData()
-  }
+  }, [authUser, appData.expenses, saveUserExpenses, refreshAppData])
 
-  const updateExpense = async (id: string, updates: Partial<UserExpense>): Promise<void> => {
+  const updateExpense = useCallback(async (id: string, updates: Partial<UserExpense>): Promise<void> => {
     // Only update user expenses, not fixed costs
     if (id.startsWith('fixed_cost_')) {
       throw new Error('Cannot update fixed cost expenses')
@@ -287,9 +287,9 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     
     saveUserExpenses(updatedUserExpenses)
     await refreshAppData()
-  }
+  }, [appData.expenses, saveUserExpenses, refreshAppData])
 
-  const deleteExpense = async (id: string): Promise<void> => {
+  const deleteExpense = useCallback(async (id: string): Promise<void> => {
     // Only delete user expenses, not fixed costs
     if (id.startsWith('fixed_cost_')) {
       throw new Error('Cannot delete fixed cost expenses')
@@ -299,9 +299,9 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     const updatedUserExpenses = userExpenses.filter(expense => expense.id !== id)
     saveUserExpenses(updatedUserExpenses)
     await refreshAppData()
-  }
+  }, [appData.expenses, saveUserExpenses, refreshAppData])
 
-  const updateBudgetCategory = async (category: string, newBudget: number): Promise<void> => {
+  const updateBudgetCategory = useCallback(async (category: string, newBudget: number): Promise<void> => {
     if (!appData.onboardingData) return
 
     const updatedOnboarding = {
@@ -314,9 +314,9 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
 
     await financialService.saveOnboardingData(updatedOnboarding)
     await refreshAppData()
-  }
+  }, [appData.onboardingData, refreshAppData])
 
-  const updateUserProfile = async (updates: Partial<UserProfile>): Promise<void> => {
+  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>): Promise<void> => {
     if (!appData.user) return
 
     const updatedProfile = { ...appData.user, ...updates }
@@ -328,9 +328,9 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
       ...prev,
       user: updatedProfile
     }))
-  }
+  }, [appData.user, authUser?.id])
 
-  const value: AppDataContextType = {
+  const value: AppDataContextType = useMemo(() => ({
     appData,
     refreshAppData,
     addExpense,
@@ -338,7 +338,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     deleteExpense,
     updateBudgetCategory,
     updateUserProfile
-  }
+  }), [appData, refreshAppData, addExpense, updateExpense, deleteExpense, updateBudgetCategory, updateUserProfile]);
 
   return (
     <AppDataContext.Provider value={value}>

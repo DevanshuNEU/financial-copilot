@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -20,12 +20,12 @@ const Navigation: React.FC = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   
-  const navItems = [
+  const navItems = useMemo(() => [
     { path: '/dashboard', icon: Home, label: 'Dashboard', description: 'Quick overview' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics', description: 'Charts & insights' },
     { path: '/budget', icon: PiggyBank, label: 'Budget', description: 'Manage budgets' },
     { path: '/expenses', icon: Receipt, label: 'Expenses', description: 'Track spending' }
-  ];
+  ], []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -39,14 +39,14 @@ const Navigation: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await signOut();
       navigate('/auth');
     } catch (error) {
       console.error('Sign out failed:', error);
     }
-  };
+  }, [signOut, navigate]);
 
   const isActivePath = (path: string) => {
     return location.pathname === path;
@@ -181,4 +181,6 @@ const Navigation: React.FC = () => {
   );
 };
 
-export default Navigation;
+Navigation.displayName = 'Navigation';
+
+export default React.memo(Navigation);
