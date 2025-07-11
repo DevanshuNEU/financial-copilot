@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useLocalAuth } from '../../contexts/authContext.local'
-import { localFinancialService } from '../../services/localFinancialService'
+import { financialService } from '../../services/financialService'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -27,7 +27,7 @@ const SimpleAuthPage: React.FC = () => {
         
         try {
           // Check if user has completed onboarding
-          const hasCompletedOnboarding = await localFinancialService.hasCompletedOnboarding()
+          const hasCompletedOnboarding = await financialService.hasCompletedOnboarding()
           
           if (hasCompletedOnboarding) {
             console.log('✅ Existing user with onboarding complete → Dashboard')

@@ -2,7 +2,7 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useLocalAuth } from '../../contexts/authContext.local'
-import { localFinancialService } from '../../services/localFinancialService'
+import { financialService } from '../../services/financialService'
 
 interface SimpleProtectedRouteProps {
   children: React.ReactNode
