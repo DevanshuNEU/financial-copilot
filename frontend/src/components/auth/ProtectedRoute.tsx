@@ -2,7 +2,6 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { financialService } from '../../services/financialService'
 import { databaseConfig } from '../../config/database'
 
 interface ProtectedRouteProps {
