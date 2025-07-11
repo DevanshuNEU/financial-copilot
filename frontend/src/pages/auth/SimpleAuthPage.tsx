@@ -1,7 +1,7 @@
 // Simple Authentication Page - No Hanging, No Timeout Issues
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useLocalAuth } from '../../contexts/LocalAuthContext'
+import { useLocalAuth } from '../../contexts/authContext.local'
 import { localFinancialService } from '../../services/localFinancialService'
 
 type AuthMode = 'signin' | 'signup'

@@ -1,6 +1,6 @@
 // Data Flow Debug Page - Test all persistence and user flow logic
 import React, { useState, useEffect } from 'react'
-import { useSupabaseAuth } from '../contexts/SupabaseAuthContext'
+import { useSupabaseAuth } from '../contexts/authContext.supabase'
 import { supabaseOnboardingService, OnboardingData } from '../services/supabaseOnboarding'
 import { checkDatabaseState } from '../utils/dbCheck'
 import { Button } from '@/components/ui/button'

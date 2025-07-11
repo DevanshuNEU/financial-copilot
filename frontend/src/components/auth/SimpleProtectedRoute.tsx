@@ -1,7 +1,7 @@
 // Simple Protected Route - No Hanging, No Timeout Issues
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { useLocalAuth } from '../../contexts/LocalAuthContext'
+import { useLocalAuth } from '../../contexts/authContext.local'
 import { localFinancialService } from '../../services/localFinancialService'
 
 interface SimpleProtectedRouteProps {

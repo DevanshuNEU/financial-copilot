@@ -16,7 +16,6 @@ import {
   SettingsPage 
 } from './pages';
 import OnboardingPage from './pages/OnboardingPage';
-import SuperSimpleTest from './pages/SuperSimpleTest';
 import './App.css';
 
 // Import the database switcher utility
@@ -32,9 +31,6 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
-            
-            {/* Test Route - Direct Access */}
-            <Route path="/test" element={<SuperSimpleTest />} />
             
             {/* Protected Routes - Authentication Required */}
             <Route path="/onboarding" element={

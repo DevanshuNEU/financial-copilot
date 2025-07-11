@@ -1,5 +1,5 @@
 // Main Auth Context - Properly handles switching without hook violations
-import React, { ReactNode, createContext, useContext } from 'react'
+import React, { ReactNode } from 'react'
 import { databaseConfig } from '../config/database'
 import { LocalAuthProvider, useLocalAuth } from './authContext.local'
 import { SupabaseAuthProvider, useSupabaseAuth } from './authContext.supabase'
@@ -21,10 +21,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 }
 
 // Create a unified auth hook that works with both providers
+// This will be called from within the appropriate provider context
+// eslint-disable-next-line react-hooks/rules-of-hooks
 export const useAuth = (): IAuthService => {
+  // Since the provider is chosen at the top level, we can safely call the appropriate hook
   if (databaseConfig.mode === 'local') {
+    // This will only be called when LocalAuthProvider is active
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     return useLocalAuth()
   } else {
+    // This will only be called when SupabaseAuthProvider is active
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     return useSupabaseAuth()
   }
 }

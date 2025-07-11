@@ -1,7 +1,7 @@
 // Simple Supabase Authentication Page with Smart User Flow
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useSupabaseAuth } from '../../contexts/SupabaseAuthContext'
+import { useSupabaseAuth } from '../../contexts/authContext.supabase'
 import { supabaseOnboardingService } from '../../services/supabaseOnboarding'
 
 type AuthMode = 'signin' | 'signup'

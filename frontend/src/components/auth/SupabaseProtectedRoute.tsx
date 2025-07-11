@@ -1,7 +1,7 @@
 // Supabase Protected Route Component
 import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { useSupabaseAuth } from '../../contexts/SupabaseAuthContext'
+import { useSupabaseAuth } from '../../contexts/authContext.supabase'
 import { supabaseOnboardingService } from '../../services/supabaseOnboarding'
 
 interface SupabaseProtectedRouteProps {
