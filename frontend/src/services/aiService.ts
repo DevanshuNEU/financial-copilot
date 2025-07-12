@@ -28,17 +28,6 @@ const STUDENT_CATEGORIES: string[] = [
   'Other'
 ];
 
-// Common student expense patterns
-const STUDENT_PATTERNS = {
-  food: ['coffee', 'pizza', 'sushi', 'burger', 'lunch', 'dinner', 'breakfast', 'snack', 'restaurant', 'dining', 'food', 'meal'],
-  transportation: ['uber', 'lyft', 'bus', 'train', 'gas', 'parking', 'metro', 'taxi', 'ride'],
-  education: ['textbook', 'book', 'supplies', 'tuition', 'lab', 'course', 'class', 'school', 'university', 'college'],
-  entertainment: ['movie', 'concert', 'game', 'party', 'bar', 'club', 'streaming', 'music', 'netflix', 'spotify'],
-  healthcare: ['doctor', 'pharmacy', 'medicine', 'hospital', 'clinic', 'prescription', 'health'],
-  shopping: ['clothes', 'amazon', 'target', 'walmart', 'mall', 'store', 'shopping', 'online'],
-  bills: ['rent', 'utilities', 'phone', 'internet', 'electricity', 'water', 'bill', 'subscription']
-};
-
 // AI Service Interface
 export interface AIExpenseProcessing {
   success: boolean;
@@ -163,34 +152,67 @@ export class AIService {
    */
   private createExpensePrompt(input: string): string {
     return `
-You are a financial assistant helping college students track expenses. 
-Analyze this expense input and extract structured information.
+You are an expert financial assistant for college students. Your job is to extract clean, professional expense information from natural language.
 
-Input: "${input}"
+CRITICAL RULES:
+1. Extract the EXACT amount mentioned (don't guess or estimate)
+2. Create a CLEAN, professional description (remove "I spent", "paid", etc.)
+3. Choose the MOST SPECIFIC category that fits
+4. Use proper capitalization and formatting
+5. Be smart about context clues (location, time, student life)
 
-Extract and return ONLY a JSON object with this exact structure:
+INPUT: "${input}"
+
+CATEGORIES (choose the most specific one):
+- Food & Dining: meals, snacks, restaurants, coffee, groceries, dining halls
+- Transportation: uber, lyft, gas, bus, train, parking, metro, bike rental
+- Education: textbooks, supplies, lab fees, course materials, printing, software
+- Entertainment: movies, concerts, games, streaming, music, events, parties
+- Healthcare: doctor, pharmacy, medicine, prescriptions, health services
+- Shopping: clothes, electronics, personal items, household goods
+- Bills & Utilities: rent, utilities, phone, internet, subscriptions, insurance
+- Other: anything that doesn't fit the above categories
+
+EXAMPLES OF GOOD EXTRACTION:
+Input: "I spent $15 on coffee at Starbucks this morning"
+Output: {"amount": 15, "description": "Coffee at Starbucks", "category": "Food & Dining", "confidence": 0.95}
+
+Input: "paid $25 for lunch at the cafeteria"
+Output: {"amount": 25, "description": "Lunch at cafeteria", "category": "Food & Dining", "confidence": 0.9}
+
+Input: "bought textbooks for chemistry class $120"
+Output: {"amount": 120, "description": "Chemistry textbooks", "category": "Education", "confidence": 0.95}
+
+Input: "uber to campus was $8"
+Output: {"amount": 8, "description": "Uber to campus", "category": "Transportation", "confidence": 0.9}
+
+Input: "dinner with friends cost me $35"
+Output: {"amount": 35, "description": "Dinner with friends", "category": "Food & Dining", "confidence": 0.85}
+
+Input: "netflix subscription $12.99"
+Output: {"amount": 12.99, "description": "Netflix subscription", "category": "Entertainment", "confidence": 0.95}
+
+Input: "gas for car $45"
+Output: {"amount": 45, "description": "Gas", "category": "Transportation", "confidence": 0.9}
+
+Input: "went to movies spent $18"
+Output: {"amount": 18, "description": "Movie tickets", "category": "Entertainment", "confidence": 0.85}
+
+DESCRIPTION RULES:
+- Remove: "I spent", "paid", "cost me", "was", etc.
+- Keep: location, item name, purpose
+- Use: proper capitalization, concise phrasing
+- Format: "Item" or "Item at Location" or "Item for Purpose"
+
+Now extract from the input above. Return ONLY a JSON object with this exact structure:
 {
   "amount": number,
   "description": "string",
   "category": "string",
-  "confidence": number (0-1)
+  "confidence": number (0.0 to 1.0)
 }
 
-Categories must be one of: ${STUDENT_CATEGORIES.join(', ')}
-
-Rules:
-- Always extract the amount as a positive number
-- Use the most specific category that fits
-- Description should be clean and concise
-- Confidence should reflect how certain you are (0.0 to 1.0)
-- If multiple amounts, use the main/first one
-- Common student expenses: coffee, food, textbooks, transportation, entertainment
-
-Example:
-Input: "I spent $15 on coffee this morning"
-Output: {"amount": 15, "description": "Coffee", "category": "Food & Dining", "confidence": 0.95}
-
-Return only valid JSON, no additional text.
+No additional text, explanations, or formatting. Just the JSON object.
     `;
   }
 
@@ -222,14 +244,17 @@ Return only valid JSON, no additional text.
         throw new Error('Invalid amount');
       }
 
+      // Clean up description with post-processing
+      const cleanDescription = this.cleanDescription(parsed.description);
+
       return {
         success: true,
         expense: {
           amount: amount,
-          description: parsed.description,
+          description: cleanDescription,
           category: parsed.category,
-          vendor: 'Unknown', // Will be updated by the service
-          status: 'pending' as const,
+          vendor: this.extractVendor(cleanDescription),
+          status: 'approved' as const,
           created_at: new Date().toISOString(),
           id: 0 // Will be generated by the service
         },
@@ -248,6 +273,81 @@ Return only valid JSON, no additional text.
   }
 
   /**
+   * Clean and format description for professional appearance
+   * @param description - Raw description from AI
+   * @returns Clean, formatted description
+   */
+  private cleanDescription(description: string): string {
+    let clean = description.trim();
+    
+    // Remove common prefixes that might slip through
+    const prefixesToRemove = [
+      'I spent',
+      'I paid',
+      'Paid for',
+      'Spent on',
+      'Bought',
+      'Purchase of',
+      'Cost of',
+      'Expense for'
+    ];
+    
+    for (const prefix of prefixesToRemove) {
+      const regex = new RegExp(`^${prefix}\\s*`, 'i');
+      clean = clean.replace(regex, '');
+    }
+    
+    // Remove dollar signs and amounts that might be in description
+    clean = clean.replace(/\$[\d,]+\.?\d*/g, '').trim();
+    
+    // Remove extra words
+    clean = clean.replace(/^(on|for|at)\s+/i, '');
+    
+    // Capitalize first letter
+    clean = clean.charAt(0).toUpperCase() + clean.slice(1);
+    
+    // Remove extra spaces
+    clean = clean.replace(/\s+/g, ' ').trim();
+    
+    // If description is too generic, make it more specific
+    if (clean.length < 3) {
+      clean = 'Expense';
+    }
+    
+    return clean;
+  }
+
+  /**
+   * Extract vendor/location from description
+   * @param description - Cleaned description
+   * @returns Vendor name or 'Unknown'
+   */
+  private extractVendor(description: string): string {
+    const lowerDesc = description.toLowerCase();
+    
+    // Common vendor patterns
+    const vendors = [
+      'starbucks', 'subway', 'mcdonalds', 'chipotle', 'panera',
+      'uber', 'lyft', 'amazon', 'target', 'walmart', 'apple',
+      'netflix', 'spotify', 'hulu', 'disney', 'cafeteria'
+    ];
+    
+    for (const vendor of vendors) {
+      if (lowerDesc.includes(vendor)) {
+        return vendor.charAt(0).toUpperCase() + vendor.slice(1);
+      }
+    }
+    
+    // Check for "at [location]" pattern
+    const atMatch = description.match(/\bat\s+([A-Za-z\s]+)/i);
+    if (atMatch) {
+      return atMatch[1].trim();
+    }
+    
+    return 'Unknown';
+  }
+
+  /**
    * Fallback parsing using regex patterns
    * @param input - Natural language input
    * @returns AIExpenseProcessing
@@ -256,63 +356,91 @@ Return only valid JSON, no additional text.
     try {
       const lowerInput = input.toLowerCase();
       
-      // Extract amount using regex
-      const amountMatch = input.match(/\$?(\d+\.?\d*)/);
-      if (!amountMatch) {
+      // Extract amount using regex - improved patterns
+      const amountPatterns = [
+        /\$(\d+\.?\d*)/,  // $15, $15.50
+        /(\d+\.?\d*)\s*dollars?/,  // 15 dollars, 15.50 dollar
+        /(\d+\.?\d*)\s*bucks?/,  // 15 bucks
+        /(\d+\.?\d*)\s*\$/, // 15$
+      ];
+      
+      let amount = 0;
+      let amountMatch = null;
+      
+      for (const pattern of amountPatterns) {
+        amountMatch = input.match(pattern);
+        if (amountMatch) {
+          amount = parseFloat(amountMatch[1]);
+          break;
+        }
+      }
+      
+      if (!amountMatch || isNaN(amount) || amount <= 0) {
         return {
           success: false,
-          error: 'No amount found in input',
+          error: 'No valid amount found in input',
           confidence: 0
         };
       }
 
-      const amount = parseFloat(amountMatch[1]);
-      if (isNaN(amount) || amount <= 0) {
-        return {
-          success: false,
-          error: 'Invalid amount',
-          confidence: 0
-        };
-      }
-
-      // Determine category based on keywords
+      // Enhanced category detection with more patterns
       let category: string = 'Other';
       let maxMatches = 0;
+      let confidence = 0.3;
 
-      for (const [cat, keywords] of Object.entries(STUDENT_PATTERNS)) {
+      // Enhanced patterns with more context
+      const enhancedPatterns = {
+        'Food & Dining': [
+          'coffee', 'starbucks', 'cafe', 'pizza', 'sushi', 'burger', 'sandwich',
+          'lunch', 'dinner', 'breakfast', 'snack', 'restaurant', 'dining', 'food',
+          'meal', 'cafeteria', 'mcdonalds', 'subway', 'chipotle', 'panera', 'kfc',
+          'taco', 'pasta', 'rice', 'noodles', 'soup', 'salad', 'drink', 'smoothie'
+        ],
+        'Transportation': [
+          'uber', 'lyft', 'taxi', 'cab', 'bus', 'train', 'metro', 'subway',
+          'gas', 'fuel', 'parking', 'toll', 'flight', 'airline', 'airport',
+          'ride', 'drive', 'commute', 'transport', 'car', 'bike', 'scooter'
+        ],
+        'Education': [
+          'textbook', 'book', 'supplies', 'tuition', 'lab', 'course', 'class',
+          'school', 'university', 'college', 'homework', 'assignment', 'project',
+          'pen', 'pencil', 'paper', 'notebook', 'calculator', 'software', 'license'
+        ],
+        'Entertainment': [
+          'movie', 'cinema', 'theater', 'concert', 'game', 'gaming', 'party',
+          'bar', 'club', 'streaming', 'music', 'netflix', 'spotify', 'hulu',
+          'disney', 'amazon prime', 'youtube', 'twitch', 'fun', 'hobby'
+        ],
+        'Healthcare': [
+          'doctor', 'hospital', 'clinic', 'pharmacy', 'medicine', 'prescription',
+          'health', 'medical', 'dentist', 'insurance', 'therapy', 'checkup'
+        ],
+        'Shopping': [
+          'clothes', 'clothing', 'shirt', 'pants', 'shoes', 'amazon', 'target',
+          'walmart', 'mall', 'store', 'shopping', 'online', 'purchase', 'buy',
+          'electronics', 'phone', 'computer', 'headphones', 'watch'
+        ],
+        'Bills & Utilities': [
+          'rent', 'utilities', 'phone', 'internet', 'wifi', 'electricity', 'water',
+          'bill', 'subscription', 'insurance', 'loan', 'payment', 'monthly'
+        ]
+      };
+
+      // Find best matching category
+      for (const [cat, keywords] of Object.entries(enhancedPatterns)) {
         const matches = keywords.filter(keyword => lowerInput.includes(keyword)).length;
         if (matches > maxMatches) {
           maxMatches = matches;
-          switch (cat) {
-            case 'food':
-              category = 'Food & Dining';
-              break;
-            case 'transportation':
-              category = 'Transportation';
-              break;
-            case 'education':
-              category = 'Education';
-              break;
-            case 'entertainment':
-              category = 'Entertainment';
-              break;
-            case 'healthcare':
-              category = 'Healthcare';
-              break;
-            case 'shopping':
-              category = 'Shopping';
-              break;
-            case 'bills':
-              category = 'Bills & Utilities';
-              break;
-            default:
-              category = 'Other';
-          }
+          category = cat;
+          confidence = matches > 2 ? 0.8 : matches > 1 ? 0.6 : 0.4;
         }
       }
 
-      // Create description
-      const description = input.replace(/\$?\d+\.?\d*/, '').trim() || 'Expense';
+      // Create smart description
+      let description = this.createSmartDescription(input, category);
+      
+      // Extract vendor
+      const vendor = this.extractVendor(description);
 
       return {
         success: true,
@@ -320,12 +448,12 @@ Return only valid JSON, no additional text.
           amount: amount,
           description: description,
           category: category,
-          vendor: 'Unknown', // Will be updated by the service
-          status: 'pending' as const,
+          vendor: vendor,
+          status: 'approved' as const,
           created_at: new Date().toISOString(),
-          id: 0 // Will be generated by the service
+          id: 0
         },
-        confidence: maxMatches > 0 ? 0.6 : 0.3,
+        confidence: confidence,
         suggestions: []
       };
 
@@ -337,6 +465,53 @@ Return only valid JSON, no additional text.
         confidence: 0
       };
     }
+  }
+
+  /**
+   * Create smart description from input
+   * @param input - Original input
+   * @param category - Detected category
+   * @returns Smart description
+   */
+  private createSmartDescription(input: string, category: string): string {
+    let description = input;
+    
+    // Remove amount from description
+    description = description.replace(/\$?\d+\.?\d*/g, '').trim();
+    
+    // Remove common prefixes
+    const prefixes = [
+      'i spent', 'i paid', 'paid for', 'spent on', 'bought', 'purchase',
+      'cost me', 'was', 'were', 'for', 'on', 'at'
+    ];
+    
+    for (const prefix of prefixes) {
+      const regex = new RegExp(`^${prefix}\\s*`, 'i');
+      description = description.replace(regex, '');
+    }
+    
+    // Clean up and capitalize
+    description = description.replace(/\s+/g, ' ').trim();
+    description = description.charAt(0).toUpperCase() + description.slice(1);
+    
+    // Add context based on category if description is too generic
+    if (description.length < 3) {
+      switch (category) {
+        case 'Food & Dining':
+          description = 'Food';
+          break;
+        case 'Transportation':
+          description = 'Transportation';
+          break;
+        case 'Education':
+          description = 'School supplies';
+          break;
+        default:
+          description = 'Expense';
+      }
+    }
+    
+    return description;
   }
 
   /**
@@ -404,26 +579,56 @@ Return only valid JSON, no additional text.
   /**
    * Get smart suggestions based on input
    * @param input - Partial input
-   * @returns string[] - Suggestions
+   * @returns string[] - Contextual suggestions
    */
   getSuggestions(input: string): string[] {
     const suggestions: string[] = [];
     const lower = input.toLowerCase();
 
-    if (lower.includes('coffee')) {
+    // Coffee-related suggestions
+    if (lower.includes('coffee') || lower.includes('starbucks') || lower.includes('cafe')) {
       suggestions.push('I spent $5 on coffee at Starbucks');
+      suggestions.push('I spent $4.50 on coffee at the campus cafe');
+      suggestions.push('I spent $6 on coffee and pastry');
     }
-    if (lower.includes('lunch')) {
+    
+    // Food-related suggestions
+    else if (lower.includes('lunch') || lower.includes('dinner') || lower.includes('food')) {
       suggestions.push('I spent $12 on lunch at the cafeteria');
+      suggestions.push('I spent $25 on dinner with friends');
+      suggestions.push('I spent $8 on sushi for lunch');
     }
-    if (lower.includes('uber')) {
+    
+    // Transportation suggestions
+    else if (lower.includes('uber') || lower.includes('lyft') || lower.includes('ride')) {
       suggestions.push('I spent $8 on Uber to campus');
+      suggestions.push('I spent $12 on Lyft to the airport');
+      suggestions.push('I spent $15 on rideshare downtown');
     }
-    if (lower.includes('book')) {
-      suggestions.push('I spent $120 on textbooks');
+    
+    // Education suggestions
+    else if (lower.includes('book') || lower.includes('textbook') || lower.includes('supplies')) {
+      suggestions.push('I spent $120 on textbooks for chemistry');
+      suggestions.push('I spent $45 on lab supplies');
+      suggestions.push('I spent $25 on notebooks and pens');
+    }
+    
+    // Entertainment suggestions
+    else if (lower.includes('movie') || lower.includes('game') || lower.includes('fun')) {
+      suggestions.push('I spent $15 on movie tickets');
+      suggestions.push('I spent $60 on video games');
+      suggestions.push('I spent $30 on concert tickets');
+    }
+    
+    // General suggestions if nothing specific matches
+    else if (lower.length > 1) {
+      suggestions.push('I spent $15 on coffee at Starbucks');
+      suggestions.push('I spent $12 on lunch at the cafeteria');
+      suggestions.push('I spent $8 on Uber to campus');
+      suggestions.push('I spent $25 on textbooks');
     }
 
-    return suggestions;
+    return suggestions.slice(0, 3); // Limit to 3 suggestions
   }
 
   /**

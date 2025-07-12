@@ -30,16 +30,18 @@
     <button onclick="runAllTests()">Run All Tests</button>
     
     <script>
-        // Test data
+        // Enhanced test data with expected results
         const testCases = [
             "I spent $15 on coffee at Starbucks",
-            "Paid $25 for lunch at the cafeteria", 
-            "Bought textbooks for $120",
-            "$8 Uber ride to campus",
-            "Dinner with friends cost me $35",
-            "Gas was $45 today",
-            "Netflix subscription $12.99",
-            "Just spent 20 dollars on pizza"
+            "i spent on food that was sushi $100",
+            "paid $25 for lunch at the cafeteria", 
+            "bought textbooks for chemistry class $120",
+            "uber to campus was $8",
+            "dinner with friends cost me $35",
+            "netflix subscription $12.99",
+            "gas for car $45",
+            "went to movies spent $18",
+            "20 dollars on pizza"
         ];
         
         // Mock AI Service for testing (replace with actual import)
@@ -62,7 +64,12 @@
                 const result = await processExpense(input);
                 
                 if (result.success) {
-                    addResult(`✅ SUCCESS: Amount: $${result.expense?.amount}, Category: ${result.expense?.category}, Description: ${result.expense?.description}, Confidence: ${result.confidence}`, 'success');
+                    addResult(`✅ SUCCESS: 
+                        Amount: $${result.expense?.amount} | 
+                        Category: ${result.expense?.category} | 
+                        Description: "${result.expense?.description}" | 
+                        Vendor: ${result.expense?.vendor} | 
+                        Confidence: ${Math.round(result.confidence * 100)}%`, 'success');
                 } else {
                     addResult(`❌ FAILED: ${result.error}`, 'error');
                 }
@@ -124,22 +131,26 @@
         
         async function processWithAI(input) {
             const prompt = `
-You are a financial assistant helping college students track expenses. 
-Analyze this expense input and extract structured information.
+You are an expert financial assistant for college students. Extract clean, professional expense information.
 
-Input: "${input}"
+CRITICAL RULES:
+1. Extract the EXACT amount mentioned
+2. Create a CLEAN, professional description (remove "I spent", "paid", etc.)
+3. Choose the MOST SPECIFIC category that fits
+4. Use proper capitalization and formatting
 
-Extract and return ONLY a JSON object with this exact structure:
-{
-  "amount": number,
-  "description": "string", 
-  "category": "string",
-  "confidence": number (0-1)
-}
+INPUT: "${input}"
 
-Categories must be one of: Food & Dining, Transportation, Education, Entertainment, Healthcare, Shopping, Bills & Utilities, Other
+CATEGORIES: Food & Dining, Transportation, Education, Entertainment, Healthcare, Shopping, Bills & Utilities, Other
 
-Return only valid JSON, no additional text.
+EXAMPLES:
+Input: "I spent $15 on coffee at Starbucks"
+Output: {"amount": 15, "description": "Coffee at Starbucks", "category": "Food & Dining", "confidence": 0.95}
+
+Input: "uber to campus was $8"
+Output: {"amount": 8, "description": "Uber to campus", "category": "Transportation", "confidence": 0.9}
+
+Return ONLY JSON with: {"amount": number, "description": "string", "category": "string", "confidence": number}
             `;
             
             const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
@@ -183,34 +194,64 @@ Return only valid JSON, no additional text.
         }
         
         function fallbackParsing(input) {
-            const amountMatch = input.match(/\$?(\d+\.?\d*)/);
-            if (!amountMatch) {
+            // Enhanced amount detection
+            const amountPatterns = [
+                /\$(\d+\.?\d*)/,
+                /(\d+\.?\d*)\s*dollars?/,
+                /(\d+\.?\d*)\s*bucks?/,
+                /(\d+\.?\d*)\s*\$/
+            ];
+            
+            let amount = 0;
+            let amountMatch = null;
+            
+            for (const pattern of amountPatterns) {
+                amountMatch = input.match(pattern);
+                if (amountMatch) {
+                    amount = parseFloat(amountMatch[1]);
+                    break;
+                }
+            }
+            
+            if (!amountMatch || isNaN(amount) || amount <= 0) {
                 return {
                     success: false,
-                    error: 'No amount found',
+                    error: 'No valid amount found',
                     confidence: 0
                 };
             }
             
-            const amount = parseFloat(amountMatch[1]);
             const lowerInput = input.toLowerCase();
             
-            // Simple category detection
+            // Enhanced category detection
             let category = 'Other';
-            if (lowerInput.includes('coffee') || lowerInput.includes('lunch') || lowerInput.includes('dinner')) {
+            if (lowerInput.includes('coffee') || lowerInput.includes('sushi') || lowerInput.includes('lunch') || lowerInput.includes('dinner') || lowerInput.includes('food')) {
                 category = 'Food & Dining';
-            } else if (lowerInput.includes('uber') || lowerInput.includes('gas')) {
+            } else if (lowerInput.includes('uber') || lowerInput.includes('gas') || lowerInput.includes('transport')) {
                 category = 'Transportation';
-            } else if (lowerInput.includes('book')) {
+            } else if (lowerInput.includes('textbook') || lowerInput.includes('book') || lowerInput.includes('chemistry')) {
                 category = 'Education';
+            } else if (lowerInput.includes('movie') || lowerInput.includes('netflix') || lowerInput.includes('entertainment')) {
+                category = 'Entertainment';
+            }
+            
+            // Enhanced description cleaning
+            let description = input.replace(/\$?\d+\.?\d*/g, '').trim();
+            description = description.replace(/^(i spent|paid|cost me|was|were|for|on|at)\s*/i, '');
+            description = description.replace(/\s+/g, ' ').trim();
+            description = description.charAt(0).toUpperCase() + description.slice(1);
+            
+            if (description.length < 3) {
+                description = category === 'Food & Dining' ? 'Food' : 'Expense';
             }
             
             return {
                 success: true,
                 expense: {
                     amount: amount,
-                    description: input.replace(/\$?\d+\.?\d*/, '').trim() || 'Expense',
-                    category: category
+                    description: description,
+                    category: category,
+                    vendor: 'Unknown'
                 },
                 confidence: 0.6
             };
