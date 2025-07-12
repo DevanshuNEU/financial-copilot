@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Service Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+        input { width: 400px; padding: 8px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>🤖 AI Service Test Page</h1>
+    
+    <div id="status"></div>
+    
+    <h2>Test Expense Processing</h2>
+    <input type="text" id="expenseInput" placeholder="Enter expense (e.g., I spent $15 on coffee)" value="I spent $15 on coffee at Starbucks">
+    <button onclick="testExpense()">Test Expense</button>
+    
+    <h2>Test Results</h2>
+    <div id="results"></div>
+    
+    <h2>Predefined Tests</h2>
+    <button onclick="runAllTests()">Run All Tests</button>
+    
+    <script>
+        // Test data
+        const testCases = [
+            "I spent $15 on coffee at Starbucks",
+            "Paid $25 for lunch at the cafeteria", 
+            "Bought textbooks for $120",
+            "$8 Uber ride to campus",
+            "Dinner with friends cost me $35",
+            "Gas was $45 today",
+            "Netflix subscription $12.99",
+            "Just spent 20 dollars on pizza"
+        ];
+        
+        // Mock AI Service for testing (replace with actual import)
+        const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'; // Replace with actual key
+        const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+        
+        async function testExpense() {
+            const input = document.getElementById('expenseInput').value;
+            const results = document.getElementById('results');
+            
+            if (!input.trim()) {
+                addResult('Please enter an expense', 'error');
+                return;
+            }
+            
+            addResult(`Testing: "${input}"`, 'info');
+            
+            try {
+                // Test the AI processing
+                const result = await processExpense(input);
+                
+                if (result.success) {
+                    addResult(`✅ SUCCESS: Amount: $${result.expense?.amount}, Category: ${result.expense?.category}, Description: ${result.expense?.description}, Confidence: ${result.confidence}`, 'success');
+                } else {
+                    addResult(`❌ FAILED: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addResult(`💥 ERROR: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+            
+            addResult('🚀 Running all tests...', 'info');
+            
+            for (const testCase of testCases) {
+                addResult(`Testing: "${testCase}"`, 'info');
+                
+                try {
+                    const result = await processExpense(testCase);
+                    
+                    if (result.success) {
+                        addResult(`✅ Success - Amount: $${result.expense?.amount}, Category: ${result.expense?.category}`, 'success');
+                    } else {
+                        addResult(`❌ Failed - ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addResult(`💥 Error - ${error.message}`, 'error');
+                }
+                
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            addResult('🎉 All tests completed!', 'info');
+        }
+        
+        // Simple expense processing function (mimics your AI service)
+        async function processExpense(input) {
+            try {
+                // First try AI processing
+                if (GEMINI_API_KEY !== 'YOUR_API_KEY_HERE') {
+                    const aiResult = await processWithAI(input);
+                    if (aiResult.success) {
+                        return aiResult;
+                    }
+                }
+                
+                // Fallback to regex parsing
+                return fallbackParsing(input);
+                
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message,
+                    confidence: 0
+                };
+            }
+        }
+        
+        async function processWithAI(input) {
+            const prompt = `
+You are a financial assistant helping college students track expenses. 
+Analyze this expense input and extract structured information.
+
+Input: "${input}"
+
+Extract and return ONLY a JSON object with this exact structure:
+{
+  "amount": number,
+  "description": "string", 
+  "category": "string",
+  "confidence": number (0-1)
+}
+
+Categories must be one of: Food & Dining, Transportation, Education, Entertainment, Healthcare, Shopping, Bills & Utilities, Other
+
+Return only valid JSON, no additional text.
+            `;
+            
+            const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }]
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`AI API Error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!aiResponse) {
+                throw new Error('No AI response received');
+            }
+            
+            // Parse AI response
+            const cleanResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const parsed = JSON.parse(cleanResponse);
+            
+            return {
+                success: true,
+                expense: {
+                    amount: parsed.amount,
+                    description: parsed.description,
+                    category: parsed.category
+                },
+                confidence: parsed.confidence || 0.8
+            };
+        }
+        
+        function fallbackParsing(input) {
+            const amountMatch = input.match(/\$?(\d+\.?\d*)/);
+            if (!amountMatch) {
+                return {
+                    success: false,
+                    error: 'No amount found',
+                    confidence: 0
+                };
+            }
+            
+            const amount = parseFloat(amountMatch[1]);
+            const lowerInput = input.toLowerCase();
+            
+            // Simple category detection
+            let category = 'Other';
+            if (lowerInput.includes('coffee') || lowerInput.includes('lunch') || lowerInput.includes('dinner')) {
+                category = 'Food & Dining';
+            } else if (lowerInput.includes('uber') || lowerInput.includes('gas')) {
+                category = 'Transportation';
+            } else if (lowerInput.includes('book')) {
+                category = 'Education';
+            }
+            
+            return {
+                success: true,
+                expense: {
+                    amount: amount,
+                    description: input.replace(/\$?\d+\.?\d*/, '').trim() || 'Expense',
+                    category: category
+                },
+                confidence: 0.6
+            };
+        }
+        
+        function addResult(message, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+            
+            // Auto-scroll to bottom
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const status = document.getElementById('status');
+            if (GEMINI_API_KEY === 'YOUR_API_KEY_HERE') {
+                status.innerHTML = '<div class="test-result error">⚠️ Please replace YOUR_API_KEY_HERE with your actual Gemini API key in this file</div>';
+            } else {
+                status.innerHTML = '<div class="test-result success">✅ API key detected, ready to test!</div>';
+            }
+        });
+    </script>
+</body>
+</html>
