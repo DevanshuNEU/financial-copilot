@@ -268,3 +268,40 @@ export interface AnalyticsData {
   metrics: Record<string, number>;
   dimensions: Record<string, string>;
 }
+
+// AI-related types
+export interface AIExpenseProcessing {
+  success: boolean;
+  expense?: Partial<Expense>;
+  suggestions?: string[];
+  confidence: number;
+  error?: string;
+}
+
+export interface AIInsight {
+  type: 'warning' | 'tip' | 'achievement' | 'suggestion';
+  title: string;
+  message: string;
+  actionable?: boolean;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface AIChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  metadata?: {
+    expenseProcessed?: boolean;
+    confidence?: number;
+    suggestions?: string[];
+  };
+}
+
+export interface AIServiceConfig {
+  apiKey: string;
+  modelName: string;
+  maxTokens: number;
+  temperature: number;
+  timeout: number;
+}
