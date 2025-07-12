@@ -5,6 +5,14 @@
 // Test cases based on the problematic examples
 const testCases = [
   {
+    input: "so today i spent 11 dollars on clothes",
+    expected: "Clothes"
+  },
+  {
+    input: "i spent 11$ on clothes",
+    expected: "Clothes"
+  },
+  {
     input: "Flight tickets for dollars to dallas $14",
     expected: "Flight tickets to Dallas"
   },
@@ -28,19 +36,32 @@ const testCases = [
 
 console.log('Testing enhanced description cleaning...\n');
 
-// Mock the cleaning function for testing
+// Mock the enhanced cleaning function for testing
 function mockCleanDescription(input) {
   let clean = input.trim();
   
-  // Remove amounts first
+  // Remove amounts first (including bare numbers)
   clean = clean.replace(/\$[\d,]*\.?\d*/g, '');
+  clean = clean.replace(/\b\d+\.?\d*\s*(dollars?|bucks?|dollar|buck)\b/gi, '');
+  clean = clean.replace(/\b\d+\.?\d*\$\b/g, '');
+  clean = clean.replace(/\b\d+\.?\d*\b/g, ''); // Remove standalone numbers
+  
+  // Remove time references
+  const timeAndPhrases = [
+    'so today', 'today', 'yesterday', 'this morning', 'earlier'
+  ];
+  
+  for (const phrase of timeAndPhrases) {
+    const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+    clean = clean.replace(regex, '');
+  }
   
   // Remove filler words
   const fillerWords = [
-    'I spent', 'I paid', 'Paid for', 'Spent on', 'Bought', 'Got', 'Purchase of', 
-    'Cost of', 'Expense for', 'Was', 'Were', 'Had', 'Took', 'Went for',
+    'i spent', 'i paid', 'paid for', 'spent on', 'bought', 'got', 'purchase of', 
+    'cost of', 'expense for', 'was', 'were', 'had', 'took', 'went for',
     'for dollars', 'dollars', 'dollar', 'bucks', 'buck', 'money', 'cash',
-    'for $', 'for', 'on', 'at', 'to', 'from', 'with', 'man', 'dude', 'bro'
+    'for', 'on', 'at', 'to', 'from', 'with', 'man', 'dude', 'bro', 'so'
   ];
   
   for (const filler of fillerWords) {

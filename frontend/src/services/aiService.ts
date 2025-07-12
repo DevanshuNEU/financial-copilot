@@ -174,6 +174,12 @@ CATEGORIES (choose the most specific one):
 - Other: anything that doesn't fit the above categories
 
 EXAMPLES OF GOOD EXTRACTION:
+Input: "so today i spent 11 dollars on clothes"
+Output: {"amount": 11, "description": "Clothes", "category": "Shopping", "confidence": 0.9}
+
+Input: "i spent 11$ on clothes"
+Output: {"amount": 11, "description": "Clothes", "category": "Shopping", "confidence": 0.9}
+
 Input: "I spent $15 on coffee at Starbucks this morning"
 Output: {"amount": 15, "description": "Coffee at Starbucks", "category": "Food & Dining", "confidence": 0.95}
 
@@ -199,10 +205,13 @@ Input: "went to movies spent $18"
 Output: {"amount": 18, "description": "Movie tickets", "category": "Entertainment", "confidence": 0.85}
 
 DESCRIPTION RULES:
-- Remove: "I spent", "paid", "cost me", "was", etc.
-- Keep: location, item name, purpose
+- Remove ALL: "I spent", "paid", "cost me", "was", "so today", "today", numbers, dollar amounts
+- Keep ONLY: the actual item/service purchased
 - Use: proper capitalization, concise phrasing
 - Format: "Item" or "Item at Location" or "Item for Purpose"
+- Examples: "Coffee", "Clothes", "Textbooks", "Uber to campus"
+
+CRITICAL: Description should be ONLY the item purchased, nothing else!
 
 Now extract from the input above. Return ONLY a JSON object with this exact structure:
 {
@@ -280,12 +289,29 @@ No additional text, explanations, or formatting. Just the JSON object.
   private cleanDescription(description: string): string {
     let clean = description.trim();
     
-    // Remove common prefixes and filler words
+    // Remove amounts first (including bare numbers that might be amounts)
+    clean = clean.replace(/\$[\d,]*\.?\d*/g, '');
+    clean = clean.replace(/\b\d+\.?\d*\s*(dollars?|bucks?|dollar|buck)\b/gi, '');
+    clean = clean.replace(/\b\d+\.?\d*\$\b/g, '');
+    clean = clean.replace(/\b\d+\.?\d*\b/g, ''); // Remove standalone numbers
+    
+    // Remove time references and common phrases
+    const timeAndPhrases = [
+      'so today', 'today', 'yesterday', 'this morning', 'this afternoon', 'this evening',
+      'earlier', 'just now', 'right now', 'recently', 'earlier today'
+    ];
+    
+    for (const phrase of timeAndPhrases) {
+      const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+      clean = clean.replace(regex, '');
+    }
+    
+    // Remove common action words and filler words
     const fillerWords = [
-      'I spent', 'I paid', 'Paid for', 'Spent on', 'Bought', 'Got', 'Purchase of', 
-      'Cost of', 'Expense for', 'Was', 'Were', 'Had', 'Took', 'Went for',
+      'i spent', 'i paid', 'paid for', 'spent on', 'bought', 'got', 'purchase of', 
+      'cost of', 'expense for', 'was', 'were', 'had', 'took', 'went for',
       'for dollars', 'dollars', 'dollar', 'bucks', 'buck', 'money', 'cash',
-      'for $', 'for', 'on', 'at', 'to', 'from', 'with', 'man', 'dude', 'bro'
+      'for', 'on', 'at', 'to', 'from', 'with', 'man', 'dude', 'bro', 'so'
     ];
     
     // Remove filler words (case insensitive)
@@ -294,11 +320,9 @@ No additional text, explanations, or formatting. Just the JSON object.
       clean = clean.replace(regex, ' ');
     }
     
-    // Remove dollar signs and amounts that might be in description
-    clean = clean.replace(/\$[\d,]*\.?\d*/g, '');
-    
-    // Remove extra spaces and clean up
+    // Clean up spaces and punctuation
     clean = clean.replace(/\s+/g, ' ').trim();
+    clean = clean.replace(/^[,\.\-\s]+|[,\.\-\s]+$/g, ''); // Remove leading/trailing punctuation
     
     // Remove leading/trailing articles and prepositions
     clean = clean.replace(/^(a|an|the|for|to|from|at|in|on|with)\s+/i, '');
@@ -307,7 +331,7 @@ No additional text, explanations, or formatting. Just the JSON object.
     // Smart capitalization
     clean = this.smartCapitalize(clean);
     
-    // If description is too short or generic, enhance it
+    // If description is too short or empty, make it generic
     if (clean.length < 2) {
       clean = 'Expense';
     }
@@ -492,9 +516,10 @@ No additional text, explanations, or formatting. Just the JSON object.
           'health', 'medical', 'dentist', 'insurance', 'therapy', 'checkup'
         ],
         'Shopping': [
-          'clothes', 'clothing', 'shirt', 'pants', 'shoes', 'amazon', 'target',
-          'walmart', 'mall', 'store', 'shopping', 'online', 'purchase', 'buy',
-          'electronics', 'phone', 'computer', 'headphones', 'watch'
+          'clothes', 'clothing', 'shirt', 'pants', 'shoes', 'dress', 'jacket', 'hat',
+          'amazon', 'target', 'walmart', 'mall', 'store', 'shopping', 'online', 'purchase', 'buy',
+          'electronics', 'phone', 'computer', 'laptop', 'headphones', 'watch', 'jewelry',
+          'makeup', 'cosmetics', 'perfume', 'shampoo', 'soap', 'toothpaste', 'personal care'
         ],
         'Bills & Utilities': [
           'rent', 'utilities', 'phone', 'internet', 'wifi', 'electricity', 'water',
