@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppData } from '../contexts/AppDataContext';
 import AddExpenseModal from '../components/dashboard/AddExpenseModal';
+import { AIChat } from '../components/ai/AIChat';
 import { 
   DashboardSkeleton,
   NoExpensesEmptyState,
@@ -511,28 +512,43 @@ const DashboardPage: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Action Center */}
+        {/* AI Chat Interface - MAIN FEATURE */}
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.4, duration: 0.6 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="mb-12"
+        >
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">💬 Tell me about your expenses</h2>
+            <p className="text-gray-600">Just type naturally - I'll handle the rest!</p>
+          </div>
+          
+          <div className="max-w-2xl mx-auto">
+            <AIChat 
+              onExpenseProcessed={(expense) => {
+                console.log('AI processed expense:', expense);
+                // TODO: This will integrate with your expense service in the next step
+                // For now, just log it
+              }}
+              className="shadow-lg border border-gray-200 bg-white rounded-xl"
+            />
+          </div>
+        </motion.div>
+
+        {/* Action Center - Secondary Navigation */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
           className="text-center"
         >
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 max-w-4xl mx-auto">
-            <h2 className="text-3xl font-black text-gray-900 mb-3">Command Center</h2>
-            <p className="text-gray-600 mb-8">Navigate your financial universe</p>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-3xl mx-auto">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Quick Actions</h3>
+            <p className="text-gray-500 mb-6 text-sm">Alternative ways to manage your finances</p>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
-                { 
-                  icon: Plus, 
-                  label: "Add Expense", 
-                  bgClass: "bg-green-50 hover:bg-green-100", 
-                  borderClass: "border-green-100 hover:border-green-200",
-                  iconClass: "text-green-600",
-                  textClass: "text-green-900",
-                  onClick: handleAddExpense 
-                },
                 { 
                   icon: BarChart3, 
                   label: "Analytics", 
