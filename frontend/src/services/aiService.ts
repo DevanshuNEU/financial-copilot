@@ -280,41 +280,83 @@ No additional text, explanations, or formatting. Just the JSON object.
   private cleanDescription(description: string): string {
     let clean = description.trim();
     
-    // Remove common prefixes that might slip through
-    const prefixesToRemove = [
-      'I spent',
-      'I paid',
-      'Paid for',
-      'Spent on',
-      'Bought',
-      'Purchase of',
-      'Cost of',
-      'Expense for'
+    // Remove common prefixes and filler words
+    const fillerWords = [
+      'I spent', 'I paid', 'Paid for', 'Spent on', 'Bought', 'Got', 'Purchase of', 
+      'Cost of', 'Expense for', 'Was', 'Were', 'Had', 'Took', 'Went for',
+      'for dollars', 'dollars', 'dollar', 'bucks', 'buck', 'money', 'cash',
+      'for $', 'for', 'on', 'at', 'to', 'from', 'with', 'man', 'dude', 'bro'
     ];
     
-    for (const prefix of prefixesToRemove) {
-      const regex = new RegExp(`^${prefix}\\s*`, 'i');
-      clean = clean.replace(regex, '');
+    // Remove filler words (case insensitive)
+    for (const filler of fillerWords) {
+      const regex = new RegExp(`\\b${filler}\\b`, 'gi');
+      clean = clean.replace(regex, ' ');
     }
     
     // Remove dollar signs and amounts that might be in description
-    clean = clean.replace(/\$[\d,]+\.?\d*/g, '').trim();
+    clean = clean.replace(/\$[\d,]*\.?\d*/g, '');
     
-    // Remove extra words
-    clean = clean.replace(/^(on|for|at)\s+/i, '');
-    
-    // Capitalize first letter
-    clean = clean.charAt(0).toUpperCase() + clean.slice(1);
-    
-    // Remove extra spaces
+    // Remove extra spaces and clean up
     clean = clean.replace(/\s+/g, ' ').trim();
     
-    // If description is too generic, make it more specific
-    if (clean.length < 3) {
+    // Remove leading/trailing articles and prepositions
+    clean = clean.replace(/^(a|an|the|for|to|from|at|in|on|with)\s+/i, '');
+    clean = clean.replace(/\s+(a|an|the|for|to|from|at|in|on|with)$/i, '');
+    
+    // Smart capitalization
+    clean = this.smartCapitalize(clean);
+    
+    // If description is too short or generic, enhance it
+    if (clean.length < 2) {
       clean = 'Expense';
     }
     
     return clean;
+  }
+
+  /**
+   * Smart capitalization for descriptions
+   * @param text - Text to capitalize
+   * @returns Properly capitalized text
+   */
+  private smartCapitalize(text: string): string {
+    const words = text.toLowerCase().split(' ');
+    
+    // Words that should always be capitalized
+    const alwaysCapitalize = [
+      'starbucks', 'panera', 'mcdonalds', 'subway', 'chipotle', 'uber', 'lyft',
+      'amazon', 'target', 'walmart', 'netflix', 'spotify', 'apple', 'google',
+      'dallas', 'austin', 'houston', 'chicago', 'boston', 'miami', 'seattle',
+      'denver', 'phoenix', 'atlanta', 'portland', 'campus', 'university'
+    ];
+    
+    // Articles and prepositions that should stay lowercase (unless first word)
+    const keepLowercase = ['a', 'an', 'the', 'and', 'or', 'but', 'for', 'to', 'from', 'at', 'in', 'on', 'with'];
+    
+    const capitalizedWords = words.map((word, index) => {
+      if (word.length === 0) return word;
+      
+      // Always capitalize first word
+      if (index === 0) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+      
+      // Keep certain words lowercase unless they're brand names
+      if (keepLowercase.includes(word) && !alwaysCapitalize.includes(word)) {
+        return word;
+      }
+      
+      // Always capitalize brand names and locations
+      if (alwaysCapitalize.includes(word)) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+      
+      // Capitalize first letter of other words
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    });
+    
+    return capitalizedWords.join(' ');
   }
 
   /**
@@ -325,23 +367,57 @@ No additional text, explanations, or formatting. Just the JSON object.
   private extractVendor(description: string): string {
     const lowerDesc = description.toLowerCase();
     
-    // Common vendor patterns
-    const vendors = [
-      'starbucks', 'subway', 'mcdonalds', 'chipotle', 'panera',
-      'uber', 'lyft', 'amazon', 'target', 'walmart', 'apple',
-      'netflix', 'spotify', 'hulu', 'disney', 'cafeteria'
-    ];
+    // Common vendor patterns with proper capitalization
+    const vendorMap = {
+      'starbucks': 'Starbucks',
+      'panera': 'Panera',
+      'subway': 'Subway',
+      'mcdonalds': 'McDonald\'s',
+      'chipotle': 'Chipotle',
+      'uber': 'Uber',
+      'lyft': 'Lyft',
+      'amazon': 'Amazon',
+      'target': 'Target',
+      'walmart': 'Walmart',
+      'apple': 'Apple',
+      'netflix': 'Netflix',
+      'spotify': 'Spotify',
+      'hulu': 'Hulu',
+      'disney': 'Disney',
+      'cafeteria': 'Cafeteria',
+      'campus': 'Campus',
+      'university': 'University'
+    };
     
-    for (const vendor of vendors) {
+    // Check for exact vendor matches
+    for (const [vendor, properName] of Object.entries(vendorMap)) {
       if (lowerDesc.includes(vendor)) {
-        return vendor.charAt(0).toUpperCase() + vendor.slice(1);
+        return properName;
       }
     }
     
-    // Check for "at [location]" pattern
-    const atMatch = description.match(/\bat\s+([A-Za-z\s]+)/i);
-    if (atMatch) {
-      return atMatch[1].trim();
+    // Check for location patterns
+    const locationPatterns = [
+      /\bat\s+([A-Za-z\s]+?)(?:\s|$)/i,
+      /\bfrom\s+([A-Za-z\s]+?)(?:\s|$)/i,
+      /\bto\s+([A-Za-z\s]+?)(?:\s|$)/i
+    ];
+    
+    for (const pattern of locationPatterns) {
+      const match = description.match(pattern);
+      if (match && match[1]) {
+        const location = match[1].trim();
+        // Check if it's a known vendor
+        const lowerLocation = location.toLowerCase();
+        const vendorName = vendorMap[lowerLocation as keyof typeof vendorMap];
+        if (vendorName) {
+          return vendorName;
+        }
+        // Return capitalized location
+        return location.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+      }
     }
     
     return 'Unknown';
@@ -474,44 +550,8 @@ No additional text, explanations, or formatting. Just the JSON object.
    * @returns Smart description
    */
   private createSmartDescription(input: string, category: string): string {
-    let description = input;
-    
-    // Remove amount from description
-    description = description.replace(/\$?\d+\.?\d*/g, '').trim();
-    
-    // Remove common prefixes
-    const prefixes = [
-      'i spent', 'i paid', 'paid for', 'spent on', 'bought', 'purchase',
-      'cost me', 'was', 'were', 'for', 'on', 'at'
-    ];
-    
-    for (const prefix of prefixes) {
-      const regex = new RegExp(`^${prefix}\\s*`, 'i');
-      description = description.replace(regex, '');
-    }
-    
-    // Clean up and capitalize
-    description = description.replace(/\s+/g, ' ').trim();
-    description = description.charAt(0).toUpperCase() + description.slice(1);
-    
-    // Add context based on category if description is too generic
-    if (description.length < 3) {
-      switch (category) {
-        case 'Food & Dining':
-          description = 'Food';
-          break;
-        case 'Transportation':
-          description = 'Transportation';
-          break;
-        case 'Education':
-          description = 'School supplies';
-          break;
-        default:
-          description = 'Expense';
-      }
-    }
-    
-    return description;
+    // Use the same cleaning logic as AI processing
+    return this.cleanDescription(input);
   }
 
   /**
