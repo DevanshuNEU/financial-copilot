@@ -527,9 +527,9 @@ const DashboardPage: React.FC = () => {
           <div className="max-w-2xl mx-auto">
             <AIChat 
               onExpenseProcessed={(expense) => {
-                console.log('AI processed expense:', expense);
-                // TODO: This will integrate with your expense service in the next step
-                // For now, just log it
+                console.log('AI processed and saved expense:', expense);
+                // The AppDataContext will automatically refresh the data
+                // No need to manually refresh since addExpense already handles it
               }}
               className="shadow-lg border border-gray-200 bg-white rounded-xl"
             />

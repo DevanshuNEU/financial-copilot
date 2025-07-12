@@ -15,6 +15,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
 import { aiService } from '../../services/aiService';
+import { useAppData } from '../../contexts/AppDataContext';
 import { AIChatMessage } from '../../types';
 
 interface AIChatProps {
@@ -26,6 +27,9 @@ export const AIChat: React.FC<AIChatProps> = ({
   onExpenseProcessed,
   className = ''
 }) => {
+  // Get app data context for expense management
+  const { addExpense } = useAppData();
+  
   // State management
   const [messages, setMessages] = useState<AIChatMessage[]>([
     {
@@ -96,20 +100,44 @@ export const AIChat: React.FC<AIChatProps> = ({
       let assistantMessage: AIChatMessage;
       
       if (result.success && result.expense) {
-        // Success - expense processed
-        assistantMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: `Perfect! I've recorded your expense:\n\n💰 **Amount:** $${result.expense.amount}\n🏷️ **Category:** ${result.expense.category}\n📝 **Description:** ${result.expense.description}\n\nConfidence: ${Math.round(result.confidence * 100)}%`,
-          timestamp: new Date(),
-          metadata: {
-            expenseProcessed: true,
-            confidence: result.confidence
-          }
-        };
-        
-        // Notify parent component
-        onExpenseProcessed?.(result.expense);
+        // Success - expense processed, now save it to the database
+        try {
+          await addExpense({
+            amount: result.expense.amount!,
+            description: result.expense.description!,
+            category: result.expense.category!,
+            vendor: result.expense.vendor || 'Unknown',
+            date: new Date().toISOString().split('T')[0],
+            status: 'approved' as const
+          });
+          
+          assistantMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `🎉 Perfect! I've saved your expense:\n\n💰 **Amount:** $${result.expense.amount}\n🏷️ **Category:** ${result.expense.category}\n📝 **Description:** ${result.expense.description}\n\n✅ **Saved successfully!** You can view it in the Expenses tab.\n\nWhat's your next expense?`,
+            timestamp: new Date(),
+            metadata: {
+              expenseProcessed: true,
+              confidence: result.confidence
+            }
+          };
+          
+          // Notify parent component
+          onExpenseProcessed?.(result.expense);
+          
+        } catch (saveError) {
+          console.error('Error saving expense:', saveError);
+          assistantMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `I processed your expense but couldn't save it: ${saveError instanceof Error ? saveError.message : 'Unknown error'}.\n\n💰 **Amount:** $${result.expense.amount}\n🏷️ **Category:** ${result.expense.category}\n📝 **Description:** ${result.expense.description}\n\nPlease try again.`,
+            timestamp: new Date(),
+            metadata: {
+              expenseProcessed: false,
+              confidence: result.confidence
+            }
+          };
+        }
         
       } else {
         // Error - couldn't process
@@ -230,10 +258,10 @@ export const AIChat: React.FC<AIChatProps> = ({
           {isProcessing && (
             <div className="flex gap-3 justify-start">
               <Bot className="w-6 h-6 text-blue-600 mt-1" />
-              <div className="bg-white border rounded-lg p-3">
+              <div className="bg-white border rounded-lg p-3 animate-pulse">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Processing your expense...
+                  Processing and saving your expense...
                 </div>
               </div>
             </div>
