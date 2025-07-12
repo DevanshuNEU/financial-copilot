@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppDataProvider } from './contexts/AppDataContext';
+import { ErrorProvider } from './contexts/ErrorContext';
+import { AppErrorBoundary, PageErrorBoundary } from './components/error';
+import { initializeSecurity } from './components/security';
 import Navigation from './components/navigation/Navigation';
 import ScrollToTop from './components/ui/ScrollToTop';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -22,12 +25,19 @@ import './App.css';
 import './utils/databaseSwitcher';
 
 function App() {
+  // Initialize security on app start
+  useEffect(() => {
+    initializeSecurity();
+  }, []);
+
   return (
-    <AuthProvider>
-      <AppDataProvider>
-        <Router>
-          <ScrollToTop />
-          <Routes>
+    <AppErrorBoundary>
+        <ErrorProvider>
+          <AuthProvider>
+            <AppDataProvider>
+              <Router>
+                <ScrollToTop />
+                <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
@@ -35,7 +45,9 @@ function App() {
             {/* Protected Routes - Authentication Required */}
             <Route path="/onboarding" element={
               <ProtectedRoute>
-                <OnboardingPage />
+                <PageErrorBoundary>
+                  <OnboardingPage />
+                </PageErrorBoundary>
               </ProtectedRoute>
             } />
             
@@ -44,7 +56,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <div className="min-h-screen bg-gray-50">
                   <Navigation />
-                  <DashboardPage />
+                  <PageErrorBoundary>
+                    <DashboardPage />
+                  </PageErrorBoundary>
                 </div>
               </ProtectedRoute>
             } />
@@ -53,7 +67,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <div className="min-h-screen bg-gray-50">
                   <Navigation />
-                  <AnalyticsPage />
+                  <PageErrorBoundary>
+                    <AnalyticsPage />
+                  </PageErrorBoundary>
                 </div>
               </ProtectedRoute>
             } />
@@ -62,7 +78,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <div className="min-h-screen bg-gray-50">
                   <Navigation />
-                  <BudgetPage />
+                  <PageErrorBoundary>
+                    <BudgetPage />
+                  </PageErrorBoundary>
                 </div>
               </ProtectedRoute>
             } />
@@ -71,7 +89,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <div className="min-h-screen bg-gray-50">
                   <Navigation />
-                  <ExpensesPage />
+                  <PageErrorBoundary>
+                    <ExpensesPage />
+                  </PageErrorBoundary>
                 </div>
               </ProtectedRoute>
             } />
@@ -80,7 +100,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <div className="min-h-screen bg-gray-50">
                   <Navigation />
-                  <SettingsPage />
+                  <PageErrorBoundary>
+                    <SettingsPage />
+                  </PageErrorBoundary>
                 </div>
               </ProtectedRoute>
             } />
@@ -111,6 +133,8 @@ function App() {
         </Router>
       </AppDataProvider>
     </AuthProvider>
+  </ErrorProvider>
+</AppErrorBoundary>
   );
 }
 

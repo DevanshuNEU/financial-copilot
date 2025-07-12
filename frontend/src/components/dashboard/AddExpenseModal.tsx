@@ -19,9 +19,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { apiService } from '../../services/api';
+import { useSecureForm, useSecureApi } from '../../components/security';
+import { validateExpenseData } from '../../utils/security';
 import { Expense } from '../../types';
 import toast from 'react-hot-toast';
+import { useAppData } from '../../contexts/AppDataContext';
 
 interface AddExpenseModalProps {
   onExpenseAdded: () => void;
@@ -57,6 +59,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   open: externalOpen, 
   onOpenChange: externalOnOpenChange 
 }) => {
+  const { addExpense } = useAppData();
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -119,15 +122,16 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
     setLoading(true);
     try {
-      const expenseData: Omit<Expense, 'id' | 'created_at'> = {
+      const expenseData = {
         amount: parseFloat(formData.amount),
         category: formData.category,
         description: formData.description.trim(),
         vendor: formData.vendor.trim() || '',
-        status: 'pending',
+        status: 'pending' as const,
+        date: new Date().toISOString(),
       };
 
-      await apiService.createExpense(expenseData);
+      await addExpense(expenseData);
       
       // Success! Close modal and refresh data
       toast.success('Expense added successfully!');

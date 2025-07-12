@@ -8,6 +8,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAppData } from '../contexts/AppDataContext';
 import AddExpenseModal from '../components/dashboard/AddExpenseModal';
 import { 
+  DashboardSkeleton,
+  NoExpensesEmptyState,
+  LoadingSpinner,
+  FinancialLoadingSpinner,
+  ComponentErrorBoundary
+} from '../components/loading';
+import { 
   Plus,
   TrendingUp,
   Sparkles,
@@ -141,19 +148,62 @@ const DashboardPage: React.FC = () => {
 
   if (appData.loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360]
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
-        />
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <DashboardSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  if (appData.error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <LoadingSpinner size="sm" color="secondary" />
+              <span className="text-gray-600">Unable to load dashboard data</span>
+            </div>
+            <p className="text-red-600 mb-4">{appData.error}</p>
+            <Button 
+              onClick={() => window.location.reload()}
+              className="mr-2"
+            >
+              Retry
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/expenses')}
+            >
+              Go to Expenses
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if no expenses
+  if (appData.expenses.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome to Financial Copilot, {getFirstName()}!
+            </h1>
+            <p className="text-gray-600">
+              Let's start your financial journey by adding your first expense
+            </p>
+          </div>
+          <ComponentErrorBoundary>
+            <NoExpensesEmptyState
+              onAddExpense={handleAddExpense}
+              onImportExpenses={() => toast.success('Import feature coming soon!')}
+            />
+          </ComponentErrorBoundary>
+        </div>
       </div>
     );
   }
@@ -189,15 +239,29 @@ const DashboardPage: React.FC = () => {
             className="mb-6"
           >
             <motion.h1 
-              className="text-7xl md:text-8xl lg:text-9xl font-black text-gray-900 mb-4 leading-none tracking-tight"
+              className="text-7xl md:text-8xl lg:text-9xl font-black text-gray-900 mb-4 leading-none tracking-tight flex items-center justify-center"
               whileHover={{ scale: 1.02 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
-              ${financialData.availableAmount.toFixed(0)}
+              {financialData.availableAmount > 0 ? (
+                `$${financialData.availableAmount.toFixed(0)}`
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <FinancialLoadingSpinner size="xl" />
+                  <span className="text-6xl">Loading...</span>
+                </div>
+              )}
             </motion.h1>
             
             <p className="text-xl text-gray-600 font-medium">
-              available from your ${financialData.totalBudget.toFixed(0)} monthly flow
+              {financialData.totalBudget > 0 ? (
+                `available from your $${financialData.totalBudget.toFixed(0)} monthly flow`
+              ) : (
+                <span className="flex items-center justify-center space-x-2">
+                  <LoadingSpinner size="sm" />
+                  <span>Calculating your financial flow...</span>
+                </span>
+              )}
             </p>
           </motion.div>
 

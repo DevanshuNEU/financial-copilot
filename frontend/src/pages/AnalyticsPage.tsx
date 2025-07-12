@@ -6,6 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../contexts/AppDataContext';
 import { 
+  AnalyticsSkeleton,
+  NoAnalyticsDataEmptyState,
+  LoadingSpinner,
+  FinancialLoadingSpinner,
+  ComponentErrorBoundary
+} from '../components/loading';
+import { 
   TrendingUp, 
   TrendingDown,
   PieChart, 
@@ -97,10 +104,11 @@ const AnalyticsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 font-medium">Loading your spending analytics...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <ComponentErrorBoundary>
+            <AnalyticsSkeleton />
+          </ComponentErrorBoundary>
         </div>
       </div>
     );
@@ -120,11 +128,37 @@ const AnalyticsPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.reload()} className="w-full">
-              Try Again
-            </Button>
+            <div className="space-y-3">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                <LoadingSpinner size="sm" className="mr-2" />
+                Try Again
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/dashboard')}
+                className="w-full"
+              >
+                Go to Dashboard
+              </Button>
+            </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Show empty state if no data to analyze
+  if (expenses.length === 0 || totalSpent === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <ComponentErrorBoundary>
+            <NoAnalyticsDataEmptyState
+              onAddData={() => navigate('/expenses')}
+              onViewGuide={() => navigate('/dashboard')}
+            />
+          </ComponentErrorBoundary>
+        </div>
       </div>
     );
   }

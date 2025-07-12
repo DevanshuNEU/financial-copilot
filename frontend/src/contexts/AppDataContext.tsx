@@ -1,7 +1,9 @@
 // Global App Data Context - Unified state management for Financial Copilot
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react'
 import { useAuth } from './AuthContext'
+import { useError } from './ErrorContext'
 import { financialService } from '../services/financialService'
+import { toast } from 'react-hot-toast'
 import type { OnboardingData, PersonalizedSafeToSpend } from '../types/services'
 
 // Extended types for complete app state
@@ -85,6 +87,7 @@ interface AppDataProviderProps {
 
 export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) => {
   const { user: authUser, isAuthenticated } = useAuth()
+  const { addError, handleNetworkError, scheduleRetry } = useError()
   
   const [appData, setAppData] = useState<AppDataState>({
     user: null,
@@ -138,10 +141,17 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     setAppData(prev => ({ ...prev, loading: true, error: null }))
 
     try {
-      // Load onboarding data
+      // Load onboarding data with error handling
       const onboarding = await financialService.loadOnboardingData()
       
       if (!onboarding) {
+        const error = new Error('No onboarding data found')
+        handleNetworkError(error, { 
+          component: 'AppDataContext',
+          action: 'loadOnboardingData',
+          userId: authUser.id 
+        })
+        
         setAppData(prev => ({
           ...prev,
           loading: false,
@@ -219,13 +229,42 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
 
     } catch (error) {
       console.error('❌ AppData: Failed to load user data:', error)
+      
+      // Use enhanced error handling
+      if (error instanceof Error) {
+        handleNetworkError(error, { 
+          component: 'AppDataContext',
+          action: 'refreshAppData',
+          userId: authUser?.id 
+        })
+        
+        // Schedule retry for critical data loading
+        scheduleRetry(
+          `refresh_app_data_${authUser?.id}`,
+          refreshAppData,
+          3
+        )
+      } else {
+        addError({
+          type: 'unknown',
+          message: 'Failed to load user data',
+          resolved: false,
+          retryable: true,
+          context: { 
+            component: 'AppDataContext',
+            action: 'refreshAppData',
+            userId: authUser?.id 
+          }
+        })
+      }
+      
       setAppData(prev => ({
         ...prev,
         loading: false,
         error: error instanceof Error ? error.message : 'Failed to load data'
       }))
     }
-  }, [authUser, loadUserExpenses])
+  }, [authUser, loadUserExpenses, handleNetworkError, addError, scheduleRetry])
 
   const saveUserExpenses = useCallback((expenses: UserExpense[]): void => {
     try {
@@ -257,49 +296,122 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
   }
 
   const addExpense = useCallback(async (expenseData: Omit<UserExpense, 'id' | 'createdAt'>): Promise<void> => {
-    if (!authUser) throw new Error('User not authenticated')
-
-    const newExpense: UserExpense = {
-      ...expenseData,
-      id: `expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString()
+    if (!authUser) {
+      addError({
+        type: 'authentication',
+        message: 'User not authenticated',
+        resolved: false,
+        retryable: false,
+        context: { component: 'AppDataContext', action: 'addExpense' }
+      })
+      throw new Error('User not authenticated')
     }
 
-    // Only save user expenses, not fixed costs
-    const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
-    const updatedUserExpenses = [...userExpenses, newExpense]
-    saveUserExpenses(updatedUserExpenses)
+    try {
+      const newExpense: UserExpense = {
+        ...expenseData,
+        id: `expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: new Date().toISOString()
+      }
 
-    // Recalculate everything
-    await refreshAppData()
-  }, [authUser, appData.expenses, saveUserExpenses, refreshAppData])
+      // Only save user expenses, not fixed costs
+      const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+      const updatedUserExpenses = [...userExpenses, newExpense]
+      saveUserExpenses(updatedUserExpenses)
+
+      // Recalculate everything
+      await refreshAppData()
+      
+      toast.success('Expense added successfully')
+    } catch (error) {
+      console.error('❌ Failed to add expense:', error)
+      
+      if (error instanceof Error) {
+        handleNetworkError(error, { 
+          component: 'AppDataContext',
+          action: 'addExpense',
+          userId: authUser.id 
+        })
+      }
+      
+      throw error
+    }
+  }, [authUser, appData.expenses, saveUserExpenses, refreshAppData, addError, handleNetworkError])
 
   const updateExpense = useCallback(async (id: string, updates: Partial<UserExpense>): Promise<void> => {
-    // Only update user expenses, not fixed costs
-    if (id.startsWith('fixed_cost_')) {
-      throw new Error('Cannot update fixed cost expenses')
-    }
+    try {
+      // Only update user expenses, not fixed costs
+      if (id.startsWith('fixed_cost_')) {
+        const error = new Error('Cannot update fixed cost expenses')
+        addError({
+          type: 'validation',
+          message: 'Cannot update fixed cost expenses',
+          resolved: false,
+          retryable: false,
+          context: { component: 'AppDataContext', action: 'updateExpense' }
+        })
+        throw error
+      }
 
-    const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
-    const updatedUserExpenses = userExpenses.map(expense =>
-      expense.id === id ? { ...expense, ...updates } : expense
-    )
-    
-    saveUserExpenses(updatedUserExpenses)
-    await refreshAppData()
-  }, [appData.expenses, saveUserExpenses, refreshAppData])
+      const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+      const updatedUserExpenses = userExpenses.map(expense =>
+        expense.id === id ? { ...expense, ...updates } : expense
+      )
+      
+      saveUserExpenses(updatedUserExpenses)
+      await refreshAppData()
+      
+      toast.success('Expense updated successfully')
+    } catch (error) {
+      console.error('❌ Failed to update expense:', error)
+      
+      if (error instanceof Error) {
+        handleNetworkError(error, { 
+          component: 'AppDataContext',
+          action: 'updateExpense',
+          userId: authUser?.id 
+        })
+      }
+      
+      throw error
+    }
+  }, [appData.expenses, saveUserExpenses, refreshAppData, addError, handleNetworkError, authUser?.id])
 
   const deleteExpense = useCallback(async (id: string): Promise<void> => {
-    // Only delete user expenses, not fixed costs
-    if (id.startsWith('fixed_cost_')) {
-      throw new Error('Cannot delete fixed cost expenses')
-    }
+    try {
+      // Only delete user expenses, not fixed costs
+      if (id.startsWith('fixed_cost_')) {
+        const error = new Error('Cannot delete fixed cost expenses')
+        addError({
+          type: 'validation',
+          message: 'Cannot delete fixed cost expenses',
+          resolved: false,
+          retryable: false,
+          context: { component: 'AppDataContext', action: 'deleteExpense' }
+        })
+        throw error
+      }
 
-    const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
-    const updatedUserExpenses = userExpenses.filter(expense => expense.id !== id)
-    saveUserExpenses(updatedUserExpenses)
-    await refreshAppData()
-  }, [appData.expenses, saveUserExpenses, refreshAppData])
+      const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+      const updatedUserExpenses = userExpenses.filter(expense => expense.id !== id)
+      saveUserExpenses(updatedUserExpenses)
+      await refreshAppData()
+      
+      toast.success('Expense deleted successfully')
+    } catch (error) {
+      console.error('❌ Failed to delete expense:', error)
+      
+      if (error instanceof Error) {
+        handleNetworkError(error, { 
+          component: 'AppDataContext',
+          action: 'deleteExpense',
+          userId: authUser?.id 
+        })
+      }
+      
+      throw error
+    }
+  }, [appData.expenses, saveUserExpenses, refreshAppData, addError, handleNetworkError, authUser?.id])
 
   const updateBudgetCategory = useCallback(async (category: string, newBudget: number): Promise<void> => {
     if (!appData.onboardingData) return
