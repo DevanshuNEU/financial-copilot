@@ -1,25 +1,27 @@
 /**
- * AI Service for Financial Copilot
- * Handles all AI-related operations using Google Gemini API
+ * Smart AI Service for Financial Copilot
+ * 
+ * This service uses pure AI intelligence to process expenses naturally.
+ * No manual keywords, patterns, or regex - just smart AI conversation!
  * 
  * Features:
- * - Natural language expense processing
- * - Expense categorization
- * - Amount extraction
- * - Smart suggestions
- * - Fallback parsing
+ * - Natural language understanding
+ * - Intelligent date parsing (yesterday, last week, etc.)
+ * - Context-aware vendor detection
+ * - Conversational follow-ups for missing info
+ * - Smart category assignment
  */
 
 import { Expense } from '../types';
 
-// AI Service Configuration
+// Configuration
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
-// Student-specific expense categories
-const STUDENT_CATEGORIES: string[] = [
+// Student-focused categories (simplified)
+const STUDENT_CATEGORIES = [
   'Food & Dining',
-  'Transportation',
+  'Transportation', 
   'Education',
   'Entertainment',
   'Healthcare',
@@ -28,28 +30,40 @@ const STUDENT_CATEGORIES: string[] = [
   'Other'
 ];
 
-// AI Service Interface
-export interface AIExpenseProcessing {
-  success: boolean;
-  expense?: Partial<Expense>;
-  suggestions?: string[];
+// Smart AI Response Interface
+export interface SmartAIResponse {
+  // Extracted expense data
+  expense?: {
+    amount?: number;
+    description?: string;
+    category?: string;
+    vendor?: string;
+    date?: string; // YYYY-MM-DD format
+  };
+  
+  // Conversation management
+  followUpQuestion?: string;
+  needsMoreInfo: boolean;
+  complete: boolean;
   confidence: number;
+  
+  // Error handling
   error?: string;
+  success: boolean;
 }
 
-export interface AIInsight {
-  type: 'warning' | 'tip' | 'achievement' | 'suggestion';
-  title: string;
-  message: string;
-  actionable?: boolean;
-  priority: 'high' | 'medium' | 'low';
+// Conversation context for follow-ups
+export interface ConversationContext {
+  pendingExpense?: Partial<Expense>;
+  lastQuestion?: string;
+  conversationHistory?: string[];
 }
 
 /**
- * AI Service Class
- * Handles all AI operations for the Financial Copilot
+ * Smart AI Service Class
+ * Uses pure AI intelligence - no manual patterns!
  */
-export class AIService {
+export class SmartAIService {
   private apiKey: string;
   private isInitialized: boolean = false;
 
@@ -58,55 +72,91 @@ export class AIService {
     this.isInitialized = !!this.apiKey;
     
     if (!this.isInitialized) {
-      console.warn('AI Service: Google Gemini API key not found. AI features will use fallback parsing.');
+      console.warn('Smart AI Service: Google Gemini API key not found.');
     }
   }
 
   /**
-   * Process natural language input and extract expense information
+   * Process expense conversation with pure AI intelligence
    * @param input - User's natural language input
-   * @returns Promise<AIExpenseProcessing>
+   * @param context - Previous conversation context
+   * @returns Promise<SmartAIResponse>
    */
-  async processExpense(input: string): Promise<AIExpenseProcessing> {
+  async processExpenseConversation(
+    input: string, 
+    context?: ConversationContext
+  ): Promise<SmartAIResponse> {
     try {
       // Input validation
       if (!input?.trim()) {
         return {
           success: false,
-          error: 'Please provide expense details',
+          error: 'Please tell me about your expense',
+          needsMoreInfo: false,
+          complete: false,
           confidence: 0
         };
       }
 
-      // Try AI processing first
+      // Try AI processing
       if (this.isInitialized) {
-        const aiResult = await this.processWithAI(input);
-        if (aiResult.success) {
-          return aiResult;
-        }
+        return await this.processWithSmartAI(input, context);
       }
 
-      // Fallback to regex parsing
-      return this.fallbackParsing(input);
+      // Fallback if no AI
+      return {
+        success: false,
+        error: 'AI service not available',
+        needsMoreInfo: false,
+        complete: false,
+        confidence: 0
+      };
 
     } catch (error) {
-      console.error('AI Service Error:', error);
+      console.error('Smart AI Service Error:', error);
       return {
         success: false,
         error: 'Failed to process expense',
+        needsMoreInfo: false,
+        complete: false,
         confidence: 0
       };
     }
   }
 
   /**
-   * Process expense using Google Gemini AI
-   * @param input - Natural language input
-   * @returns Promise<AIExpenseProcessing>
+   * Handle follow-up conversations
+   * @param answer - User's answer to follow-up question
+   * @param context - Conversation context with pending expense
+   * @returns Promise<SmartAIResponse>
    */
-  private async processWithAI(input: string): Promise<AIExpenseProcessing> {
+  async handleFollowUp(
+    answer: string,
+    context: ConversationContext
+  ): Promise<SmartAIResponse> {
+    const fullInput = `
+Previous context: ${JSON.stringify(context.pendingExpense)}
+Follow-up question was: ${context.lastQuestion}
+User's answer: ${answer}
+
+Please update the expense with this new information.
+    `;
+
+    return this.processExpenseConversation(fullInput, context);
+  }
+
+  /**
+   * Process with smart AI prompts
+   * @param input - User input
+   * @param context - Conversation context
+   * @returns Promise<SmartAIResponse>
+   */
+  private async processWithSmartAI(
+    input: string,
+    context?: ConversationContext
+  ): Promise<SmartAIResponse> {
     try {
-      const prompt = this.createExpensePrompt(input);
+      const prompt = this.createSmartPrompt(input, context);
       
       const response = await fetch(`${GEMINI_API_URL}?key=${this.apiKey}`, {
         method: 'POST',
@@ -133,516 +183,273 @@ export class AIService {
         throw new Error('No AI response received');
       }
 
-      return this.parseAIResponse(aiResponse);
+      return this.parseSmartResponse(aiResponse);
 
     } catch (error) {
-      console.error('AI Processing Error:', error);
+      console.error('Smart AI Processing Error:', error);
       return {
         success: false,
         error: 'AI processing failed',
+        needsMoreInfo: false,
+        complete: false,
         confidence: 0
       };
     }
   }
 
   /**
-   * Create structured prompt for expense processing
+   * Create intelligent prompt for Gemini
    * @param input - User input
-   * @returns string - Formatted prompt
+   * @param context - Conversation context
+   * @returns Formatted prompt
    */
-  private createExpensePrompt(input: string): string {
+  private createSmartPrompt(input: string, context?: ConversationContext): string {
+    const currentDate = new Date();
+    const dateString = currentDate.toISOString().split('T')[0];
+    const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+    
     return `
-You are an expert financial assistant for college students. Your job is to extract clean, professional expense information from natural language.
+You are an intelligent financial assistant for college students. Your job is to extract expense information from natural language and handle conversations smartly.
 
-CRITICAL RULES:
-1. Extract the EXACT amount mentioned (don't guess or estimate)
-2. Create a CLEAN, professional description (remove "I spent", "paid", etc.)
-3. Choose the MOST SPECIFIC category that fits
-4. Use proper capitalization and formatting
-5. Be smart about context clues (location, time, student life)
+CURRENT CONTEXT:
+- Today's date: ${dateString} (${dayName})
+- Available categories: ${STUDENT_CATEGORIES.join(', ')}
+${context?.pendingExpense ? `- Pending expense: ${JSON.stringify(context.pendingExpense)}` : ''}
+${context?.lastQuestion ? `- Last question asked: ${context.lastQuestion}` : ''}
 
-INPUT: "${input}"
+USER INPUT: "${input}"
 
-CATEGORIES (choose the most specific one):
-- Food & Dining: meals, snacks, restaurants, coffee, groceries, dining halls
-- Transportation: uber, lyft, gas, bus, train, parking, metro, bike rental
-- Education: textbooks, supplies, lab fees, course materials, printing, software
-- Entertainment: movies, concerts, games, streaming, music, events, parties
-- Healthcare: doctor, pharmacy, medicine, prescriptions, health services
-- Shopping: clothes, electronics, personal items, household goods
-- Bills & Utilities: rent, utilities, phone, internet, subscriptions, insurance
-- Other: anything that doesn't fit the above categories
+INTELLIGENCE RULES:
+1. **Date Processing**: Convert relative dates to actual dates
+   - "yesterday" → ${new Date(currentDate.getTime() - 86400000).toISOString().split('T')[0]}
+   - "last friday" → calculate the actual date
+   - "this morning", "today" → ${dateString}
+   - "last week" → approximate date
 
-EXAMPLES OF GOOD EXTRACTION:
-Input: "so today i spent 11 dollars on clothes"
-Output: {"amount": 11, "description": "Clothes", "category": "Shopping", "confidence": 0.9}
+2. **Context Understanding**: Be smart about context
+   - "subway" with food context = Subway restaurant
+   - "subway" with transport context = subway transportation
+   - "coffee" usually means Food & Dining
+   - "uber" usually means Transportation
 
-Input: "i spent 11$ on clothes"
-Output: {"amount": 11, "description": "Clothes", "category": "Shopping", "confidence": 0.9}
+3. **Missing Information**: If critical info is missing, ask ONE specific question
+   - Missing amount: "How much did you spend?"
+   - Missing vendor: "Where did you buy this from?"
+   - Unclear context: "Was this for [specific clarification]?"
 
-Input: "I spent $15 on coffee at Starbucks this morning"
-Output: {"amount": 15, "description": "Coffee at Starbucks", "category": "Food & Dining", "confidence": 0.95}
+4. **Smart Descriptions**: Create clean, professional titles
+   - "I spent money on coffee" → "Coffee"
+   - "bought groceries yesterday" → "Groceries"  
+   - "dinner with sarah" → "Dinner with Sarah"
 
-Input: "paid $25 for lunch at the cafeteria"
-Output: {"amount": 25, "description": "Lunch at cafeteria", "category": "Food & Dining", "confidence": 0.9}
+5. **Follow-up Handling**: If this is a follow-up, update the pending expense
 
-Input: "bought textbooks for chemistry class $120"
-Output: {"amount": 120, "description": "Chemistry textbooks", "category": "Education", "confidence": 0.95}
-
-Input: "uber to campus was $8"
-Output: {"amount": 8, "description": "Uber to campus", "category": "Transportation", "confidence": 0.9}
-
-Input: "dinner with friends cost me $35"
-Output: {"amount": 35, "description": "Dinner with friends", "category": "Food & Dining", "confidence": 0.85}
-
-Input: "netflix subscription $12.99"
-Output: {"amount": 12.99, "description": "Netflix subscription", "category": "Entertainment", "confidence": 0.95}
-
-Input: "gas for car $45"
-Output: {"amount": 45, "description": "Gas", "category": "Transportation", "confidence": 0.9}
-
-Input: "went to movies spent $18"
-Output: {"amount": 18, "description": "Movie tickets", "category": "Entertainment", "confidence": 0.85}
-
-DESCRIPTION RULES:
-- Remove ALL: "I spent", "paid", "cost me", "was", "so today", "today", numbers, dollar amounts
-- Keep ONLY: the actual item/service purchased
-- Use: proper capitalization, concise phrasing
-- Format: "Item" or "Item at Location" or "Item for Purpose"
-- Examples: "Coffee", "Clothes", "Textbooks", "Uber to campus"
-
-CRITICAL: Description should be ONLY the item purchased, nothing else!
-
-Now extract from the input above. Return ONLY a JSON object with this exact structure:
+RESPONSE FORMAT (JSON only):
 {
-  "amount": number,
-  "description": "string",
-  "category": "string",
-  "confidence": number (0.0 to 1.0)
+  "expense": {
+    "amount": number or null,
+    "description": "Clean title" or null,
+    "category": "Category from list" or null,
+    "vendor": "Vendor name" or null,
+    "date": "YYYY-MM-DD" or null
+  },
+  "followUpQuestion": "Specific question" or null,
+  "needsMoreInfo": boolean,
+  "complete": boolean,
+  "confidence": 0.0-1.0,
+  "reasoning": "Brief explanation of your thinking"
 }
 
-No additional text, explanations, or formatting. Just the JSON object.
+EXAMPLES:
+
+Input: "I spent 10.88$ in subway today"
+Output: {
+  "expense": {
+    "amount": 10.88,
+    "description": "Subway order",
+    "category": "Food & Dining",
+    "vendor": "Subway",
+    "date": "${dateString}"
+  },
+  "followUpQuestion": null,
+  "needsMoreInfo": false,
+  "complete": true,
+  "confidence": 0.95,
+  "reasoning": "Complete expense with all information present"
+}
+
+Input: "yesterday i spent 46.77$ on groceries"  
+Output: {
+  "expense": {
+    "amount": 46.77,
+    "description": "Groceries",
+    "category": "Food & Dining",
+    "vendor": null,
+    "date": "${new Date(currentDate.getTime() - 86400000).toISOString().split('T')[0]}"
+  },
+  "followUpQuestion": "Where did you buy the groceries from?",
+  "needsMoreInfo": true,
+  "complete": false,
+  "confidence": 0.8,
+  "reasoning": "Amount, description, and date clear, but vendor missing"
+}
+
+Input: "coffee this morning"
+Output: {
+  "expense": {
+    "amount": null,
+    "description": "Coffee",
+    "category": "Food & Dining", 
+    "vendor": null,
+    "date": "${dateString}"
+  },
+  "followUpQuestion": "How much did you spend on coffee?",
+  "needsMoreInfo": true,
+  "complete": false,
+  "confidence": 0.7,
+  "reasoning": "Missing amount and vendor information"
+}
+
+Now process the user input above. Return ONLY the JSON response, no additional text.
     `;
   }
 
   /**
-   * Parse AI response and validate structure
+   * Parse AI response and validate with better error handling
    * @param response - AI response text
-   * @returns AIExpenseProcessing
+   * @returns SmartAIResponse
    */
-  private parseAIResponse(response: string): AIExpenseProcessing {
+  private parseSmartResponse(response: string): SmartAIResponse {
     try {
-      // Clean the response (remove markdown, extra text)
-      const cleanResponse = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      // Clean the response more aggressively
+      let cleanResponse = response
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .replace(/^[^{]*/, '') // Remove any text before first {
+        .replace(/[^}]*$/, '') // Remove any text after last }
+        .trim();
+      
+      // Find the JSON object bounds
+      const firstBrace = cleanResponse.indexOf('{');
+      const lastBrace = cleanResponse.lastIndexOf('}');
+      
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleanResponse = cleanResponse.substring(firstBrace, lastBrace + 1);
+      }
       
       const parsed = JSON.parse(cleanResponse);
       
-      // Validate required fields
-      if (!parsed.amount || !parsed.description || !parsed.category) {
-        throw new Error('Missing required fields');
+      // Validate structure
+      if (!parsed.expense && !parsed.followUpQuestion) {
+        throw new Error('Invalid response structure');
       }
 
-      // Validate category
-      if (!STUDENT_CATEGORIES.includes(parsed.category)) {
-        parsed.category = 'Other';
+      // Validate category if provided
+      if (parsed.expense?.category && !STUDENT_CATEGORIES.includes(parsed.expense.category)) {
+        parsed.expense.category = 'Other';
       }
 
-      // Validate amount
-      const amount = parseFloat(parsed.amount);
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error('Invalid amount');
+      // Validate amount if provided
+      if (parsed.expense?.amount !== null && parsed.expense?.amount !== undefined) {
+        const amount = parseFloat(parsed.expense.amount);
+        if (isNaN(amount) || amount <= 0) {
+          parsed.expense.amount = null;
+          if (!parsed.followUpQuestion) {
+            parsed.followUpQuestion = "What was the amount you spent?";
+            parsed.needsMoreInfo = true;
+            parsed.complete = false;
+          }
+        }
       }
-
-      // Clean up description with post-processing
-      const cleanDescription = this.cleanDescription(parsed.description);
 
       return {
         success: true,
-        expense: {
-          amount: amount,
-          description: cleanDescription,
-          category: parsed.category,
-          vendor: this.extractVendor(cleanDescription),
-          status: 'approved' as const,
-          created_at: new Date().toISOString(),
-          id: 0 // Will be generated by the service
-        },
-        confidence: Math.min(Math.max(parsed.confidence || 0.7, 0), 1),
-        suggestions: []
+        expense: parsed.expense,
+        followUpQuestion: parsed.followUpQuestion || undefined,
+        needsMoreInfo: parsed.needsMoreInfo || false,
+        complete: parsed.complete || false,
+        confidence: Math.min(Math.max(parsed.confidence || 0.7, 0), 1)
       };
 
     } catch (error) {
-      console.error('AI Response Parsing Error:', error);
-      return {
-        success: false,
-        error: 'Failed to parse AI response',
-        confidence: 0
-      };
+      console.error('Smart AI Response Parsing Error:', error);
+      console.log('Raw response:', response);
+      
+      // Fallback: Try to extract basic info using regex
+      return this.fallbackExtraction(response);
     }
   }
 
   /**
-   * Clean and format description for professional appearance
-   * @param description - Raw description from AI
-   * @returns Clean, formatted description
+   * Fallback extraction using regex when JSON parsing fails
+   * @param response - AI response text
+   * @returns SmartAIResponse
    */
-  private cleanDescription(description: string): string {
-    let clean = description.trim();
-    
-    // Remove amounts first (including bare numbers that might be amounts)
-    clean = clean.replace(/\$[\d,]*\.?\d*/g, '');
-    clean = clean.replace(/\b\d+\.?\d*\s*(dollars?|bucks?|dollar|buck)\b/gi, '');
-    clean = clean.replace(/\b\d+\.?\d*\$\b/g, '');
-    clean = clean.replace(/\b\d+\.?\d*\b/g, ''); // Remove standalone numbers
-    
-    // Remove time references and common phrases
-    const timeAndPhrases = [
-      'so today', 'today', 'yesterday', 'this morning', 'this afternoon', 'this evening',
-      'earlier', 'just now', 'right now', 'recently', 'earlier today'
-    ];
-    
-    for (const phrase of timeAndPhrases) {
-      const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
-      clean = clean.replace(regex, '');
-    }
-    
-    // Remove common action words and filler words
-    const fillerWords = [
-      'i spent', 'i paid', 'paid for', 'spent on', 'bought', 'got', 'purchase of', 
-      'cost of', 'expense for', 'was', 'were', 'had', 'took', 'went for',
-      'for dollars', 'dollars', 'dollar', 'bucks', 'buck', 'money', 'cash',
-      'for', 'on', 'at', 'to', 'from', 'with', 'man', 'dude', 'bro', 'so'
-    ];
-    
-    // Remove filler words (case insensitive)
-    for (const filler of fillerWords) {
-      const regex = new RegExp(`\\b${filler}\\b`, 'gi');
-      clean = clean.replace(regex, ' ');
-    }
-    
-    // Clean up spaces and punctuation
-    clean = clean.replace(/\s+/g, ' ').trim();
-    clean = clean.replace(/^[,\.\-\s]+|[,\.\-\s]+$/g, ''); // Remove leading/trailing punctuation
-    
-    // Remove leading/trailing articles and prepositions
-    clean = clean.replace(/^(a|an|the|for|to|from|at|in|on|with)\s+/i, '');
-    clean = clean.replace(/\s+(a|an|the|for|to|from|at|in|on|with)$/i, '');
-    
-    // Smart capitalization
-    clean = this.smartCapitalize(clean);
-    
-    // If description is too short or empty, make it generic
-    if (clean.length < 2) {
-      clean = 'Expense';
-    }
-    
-    return clean;
-  }
-
-  /**
-   * Smart capitalization for descriptions
-   * @param text - Text to capitalize
-   * @returns Properly capitalized text
-   */
-  private smartCapitalize(text: string): string {
-    const words = text.toLowerCase().split(' ');
-    
-    // Words that should always be capitalized
-    const alwaysCapitalize = [
-      'starbucks', 'panera', 'mcdonalds', 'subway', 'chipotle', 'uber', 'lyft',
-      'amazon', 'target', 'walmart', 'netflix', 'spotify', 'apple', 'google',
-      'dallas', 'austin', 'houston', 'chicago', 'boston', 'miami', 'seattle',
-      'denver', 'phoenix', 'atlanta', 'portland', 'campus', 'university'
-    ];
-    
-    // Articles and prepositions that should stay lowercase (unless first word)
-    const keepLowercase = ['a', 'an', 'the', 'and', 'or', 'but', 'for', 'to', 'from', 'at', 'in', 'on', 'with'];
-    
-    const capitalizedWords = words.map((word, index) => {
-      if (word.length === 0) return word;
-      
-      // Always capitalize first word
-      if (index === 0) {
-        return word.charAt(0).toUpperCase() + word.slice(1);
-      }
-      
-      // Keep certain words lowercase unless they're brand names
-      if (keepLowercase.includes(word) && !alwaysCapitalize.includes(word)) {
-        return word;
-      }
-      
-      // Always capitalize brand names and locations
-      if (alwaysCapitalize.includes(word)) {
-        return word.charAt(0).toUpperCase() + word.slice(1);
-      }
-      
-      // Capitalize first letter of other words
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    });
-    
-    return capitalizedWords.join(' ');
-  }
-
-  /**
-   * Extract vendor/location from description
-   * @param description - Cleaned description
-   * @returns Vendor name or 'Unknown'
-   */
-  private extractVendor(description: string): string {
-    const lowerDesc = description.toLowerCase();
-    
-    // Common vendor patterns with proper capitalization
-    const vendorMap = {
-      'starbucks': 'Starbucks',
-      'panera': 'Panera',
-      'subway': 'Subway',
-      'mcdonalds': 'McDonald\'s',
-      'chipotle': 'Chipotle',
-      'uber': 'Uber',
-      'lyft': 'Lyft',
-      'amazon': 'Amazon',
-      'target': 'Target',
-      'walmart': 'Walmart',
-      'apple': 'Apple',
-      'netflix': 'Netflix',
-      'spotify': 'Spotify',
-      'hulu': 'Hulu',
-      'disney': 'Disney',
-      'cafeteria': 'Cafeteria',
-      'campus': 'Campus',
-      'university': 'University'
-    };
-    
-    // Check for exact vendor matches
-    for (const [vendor, properName] of Object.entries(vendorMap)) {
-      if (lowerDesc.includes(vendor)) {
-        return properName;
-      }
-    }
-    
-    // Check for location patterns
-    const locationPatterns = [
-      /\bat\s+([A-Za-z\s]+?)(?:\s|$)/i,
-      /\bfrom\s+([A-Za-z\s]+?)(?:\s|$)/i,
-      /\bto\s+([A-Za-z\s]+?)(?:\s|$)/i
-    ];
-    
-    for (const pattern of locationPatterns) {
-      const match = description.match(pattern);
-      if (match && match[1]) {
-        const location = match[1].trim();
-        // Check if it's a known vendor
-        const lowerLocation = location.toLowerCase();
-        const vendorName = vendorMap[lowerLocation as keyof typeof vendorMap];
-        if (vendorName) {
-          return vendorName;
-        }
-        // Return capitalized location
-        return location.split(' ').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-        ).join(' ');
-      }
-    }
-    
-    return 'Unknown';
-  }
-
-  /**
-   * Fallback parsing using regex patterns
-   * @param input - Natural language input
-   * @returns AIExpenseProcessing
-   */
-  private fallbackParsing(input: string): AIExpenseProcessing {
+  private fallbackExtraction(response: string): SmartAIResponse {
     try {
-      const lowerInput = input.toLowerCase();
+      // Try to extract basic information using regex
+      const amountMatch = response.match(/amount["\s]*:["\s]*(\d+\.?\d*)/i);
+      const descriptionMatch = response.match(/description["\s]*:["\s]*"([^"]+)"/i);
+      const categoryMatch = response.match(/category["\s]*:["\s]*"([^"]+)"/i);
+      const questionMatch = response.match(/followUpQuestion["\s]*:["\s]*"([^"]+)"/i);
       
-      // Extract amount using regex - improved patterns
-      const amountPatterns = [
-        /\$(\d+\.?\d*)/,  // $15, $15.50
-        /(\d+\.?\d*)\s*dollars?/,  // 15 dollars, 15.50 dollar
-        /(\d+\.?\d*)\s*bucks?/,  // 15 bucks
-        /(\d+\.?\d*)\s*\$/, // 15$
-      ];
-      
-      let amount = 0;
-      let amountMatch = null;
-      
-      for (const pattern of amountPatterns) {
-        amountMatch = input.match(pattern);
-        if (amountMatch) {
-          amount = parseFloat(amountMatch[1]);
-          break;
-        }
-      }
-      
-      if (!amountMatch || isNaN(amount) || amount <= 0) {
+      if (amountMatch || descriptionMatch || questionMatch) {
         return {
-          success: false,
-          error: 'No valid amount found in input',
-          confidence: 0
+          success: true,
+          expense: {
+            amount: amountMatch ? parseFloat(amountMatch[1]) : undefined,
+            description: descriptionMatch ? descriptionMatch[1] : undefined,
+            category: categoryMatch ? categoryMatch[1] : 'Other',
+            vendor: undefined,
+            date: new Date().toISOString().split('T')[0]
+          },
+          followUpQuestion: questionMatch ? questionMatch[1] : undefined,
+          needsMoreInfo: !!questionMatch,
+          complete: !questionMatch,
+          confidence: 0.6
         };
       }
-
-      // Enhanced category detection with more patterns
-      let category: string = 'Other';
-      let maxMatches = 0;
-      let confidence = 0.3;
-
-      // Enhanced patterns with more context
-      const enhancedPatterns = {
-        'Food & Dining': [
-          'coffee', 'starbucks', 'cafe', 'pizza', 'sushi', 'burger', 'sandwich',
-          'lunch', 'dinner', 'breakfast', 'snack', 'restaurant', 'dining', 'food',
-          'meal', 'cafeteria', 'mcdonalds', 'subway', 'chipotle', 'panera', 'kfc',
-          'taco', 'pasta', 'rice', 'noodles', 'soup', 'salad', 'drink', 'smoothie'
-        ],
-        'Transportation': [
-          'uber', 'lyft', 'taxi', 'cab', 'bus', 'train', 'metro', 'subway',
-          'gas', 'fuel', 'parking', 'toll', 'flight', 'airline', 'airport',
-          'ride', 'drive', 'commute', 'transport', 'car', 'bike', 'scooter'
-        ],
-        'Education': [
-          'textbook', 'book', 'supplies', 'tuition', 'lab', 'course', 'class',
-          'school', 'university', 'college', 'homework', 'assignment', 'project',
-          'pen', 'pencil', 'paper', 'notebook', 'calculator', 'software', 'license'
-        ],
-        'Entertainment': [
-          'movie', 'cinema', 'theater', 'concert', 'game', 'gaming', 'party',
-          'bar', 'club', 'streaming', 'music', 'netflix', 'spotify', 'hulu',
-          'disney', 'amazon prime', 'youtube', 'twitch', 'fun', 'hobby'
-        ],
-        'Healthcare': [
-          'doctor', 'hospital', 'clinic', 'pharmacy', 'medicine', 'prescription',
-          'health', 'medical', 'dentist', 'insurance', 'therapy', 'checkup'
-        ],
-        'Shopping': [
-          'clothes', 'clothing', 'shirt', 'pants', 'shoes', 'dress', 'jacket', 'hat',
-          'amazon', 'target', 'walmart', 'mall', 'store', 'shopping', 'online', 'purchase', 'buy',
-          'electronics', 'phone', 'computer', 'laptop', 'headphones', 'watch', 'jewelry',
-          'makeup', 'cosmetics', 'perfume', 'shampoo', 'soap', 'toothpaste', 'personal care'
-        ],
-        'Bills & Utilities': [
-          'rent', 'utilities', 'phone', 'internet', 'wifi', 'electricity', 'water',
-          'bill', 'subscription', 'insurance', 'loan', 'payment', 'monthly'
-        ]
-      };
-
-      // Find best matching category
-      for (const [cat, keywords] of Object.entries(enhancedPatterns)) {
-        const matches = keywords.filter(keyword => lowerInput.includes(keyword)).length;
-        if (matches > maxMatches) {
-          maxMatches = matches;
-          category = cat;
-          confidence = matches > 2 ? 0.8 : matches > 1 ? 0.6 : 0.4;
-        }
-      }
-
-      // Create smart description
-      let description = this.createSmartDescription(input, category);
-      
-      // Extract vendor
-      const vendor = this.extractVendor(description);
-
-      return {
-        success: true,
-        expense: {
-          amount: amount,
-          description: description,
-          category: category,
-          vendor: vendor,
-          status: 'approved' as const,
-          created_at: new Date().toISOString(),
-          id: 0
-        },
-        confidence: confidence,
-        suggestions: []
-      };
-
     } catch (error) {
-      console.error('Fallback Parsing Error:', error);
-      return {
-        success: false,
-        error: 'Failed to parse expense',
-        confidence: 0
-      };
+      console.error('Fallback extraction failed:', error);
     }
+    
+    return {
+      success: false,
+      error: 'Could not understand the expense. Please try rephrasing.',
+      needsMoreInfo: false,
+      complete: false,
+      confidence: 0
+    };
   }
 
   /**
-   * Create smart description from input
-   * @param input - Original input
-   * @param category - Detected category
-   * @returns Smart description
+   * Check if service is available
+   * @returns boolean
    */
-  private createSmartDescription(input: string, category: string): string {
-    // Use the same cleaning logic as AI processing
-    return this.cleanDescription(input);
+  isAvailable(): boolean {
+    return this.isInitialized;
   }
 
   /**
-   * Generate proactive insights based on expense data
-   * @param expenses - Recent expenses
-   * @returns Promise<AIInsight[]>
+   * Legacy method for backward compatibility
+   * @param input - User input
+   * @returns Promise<AIExpenseProcessing>
    */
-  async generateInsights(expenses: Expense[]): Promise<AIInsight[]> {
-    const insights: AIInsight[] = [];
-
-    if (expenses.length === 0) {
-      return insights;
-    }
-
-    // Calculate recent spending patterns
-    const recentExpenses = expenses.filter(e => 
-      new Date(e.created_at) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    );
-
-    const totalWeekly = recentExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const avgDaily = totalWeekly / 7;
-
-    // Coffee spending analysis
-    const coffeeExpenses = recentExpenses.filter(e => 
-      e.description.toLowerCase().includes('coffee') || 
-      e.description.toLowerCase().includes('starbucks')
-    );
-
-    if (coffeeExpenses.length > 3) {
-      const coffeeTotal = coffeeExpenses.reduce((sum, e) => sum + e.amount, 0);
-      insights.push({
-        type: 'tip',
-        title: 'Coffee Spending Alert',
-        message: `You've spent $${coffeeTotal.toFixed(2)} on coffee this week. Consider making coffee at home to save money!`,
-        actionable: true,
-        priority: 'medium'
-      });
-    }
-
-    // High daily spending
-    if (avgDaily > 50) {
-      insights.push({
-        type: 'warning',
-        title: 'High Daily Spending',
-        message: `Your daily average is $${avgDaily.toFixed(2)}. Consider setting a daily budget limit.`,
-        actionable: true,
-        priority: 'high'
-      });
-    }
-
-    // Achievement for tracking
-    if (recentExpenses.length >= 5) {
-      insights.push({
-        type: 'achievement',
-        title: 'Great Job Tracking!',
-        message: `You've logged ${recentExpenses.length} expenses this week. Keep up the good work!`,
-        actionable: false,
-        priority: 'low'
-      });
-    }
-
-    return insights;
+  async processExpense(input: string): Promise<any> {
+    const result = await this.processExpenseConversation(input);
+    
+    // Convert to legacy format for backward compatibility
+    return {
+      success: result.success,
+      expense: result.expense,
+      suggestions: [],
+      confidence: result.confidence,
+      error: result.error
+    };
   }
 
   /**
-   * Get smart suggestions based on input
+   * Legacy method for suggestions (for backward compatibility)
    * @param input - Partial input
    * @returns string[] - Contextual suggestions
    */
@@ -650,60 +457,32 @@ No additional text, explanations, or formatting. Just the JSON object.
     const suggestions: string[] = [];
     const lower = input.toLowerCase();
 
-    // Coffee-related suggestions
+    // Provide smart suggestions based on input
     if (lower.includes('coffee') || lower.includes('starbucks') || lower.includes('cafe')) {
       suggestions.push('I spent $5 on coffee at Starbucks');
       suggestions.push('I spent $4.50 on coffee at the campus cafe');
       suggestions.push('I spent $6 on coffee and pastry');
-    }
-    
-    // Food-related suggestions
-    else if (lower.includes('lunch') || lower.includes('dinner') || lower.includes('food')) {
+    } else if (lower.includes('lunch') || lower.includes('dinner') || lower.includes('food')) {
       suggestions.push('I spent $12 on lunch at the cafeteria');
       suggestions.push('I spent $25 on dinner with friends');
       suggestions.push('I spent $8 on sushi for lunch');
-    }
-    
-    // Transportation suggestions
-    else if (lower.includes('uber') || lower.includes('lyft') || lower.includes('ride')) {
+    } else if (lower.includes('uber') || lower.includes('lyft') || lower.includes('ride')) {
       suggestions.push('I spent $8 on Uber to campus');
       suggestions.push('I spent $12 on Lyft to the airport');
       suggestions.push('I spent $15 on rideshare downtown');
-    }
-    
-    // Education suggestions
-    else if (lower.includes('book') || lower.includes('textbook') || lower.includes('supplies')) {
-      suggestions.push('I spent $120 on textbooks for chemistry');
-      suggestions.push('I spent $45 on lab supplies');
-      suggestions.push('I spent $25 on notebooks and pens');
-    }
-    
-    // Entertainment suggestions
-    else if (lower.includes('movie') || lower.includes('game') || lower.includes('fun')) {
-      suggestions.push('I spent $15 on movie tickets');
-      suggestions.push('I spent $60 on video games');
-      suggestions.push('I spent $30 on concert tickets');
-    }
-    
-    // General suggestions if nothing specific matches
-    else if (lower.length > 1) {
+    } else if (lower.length > 1) {
       suggestions.push('I spent $15 on coffee at Starbucks');
       suggestions.push('I spent $12 on lunch at the cafeteria');
       suggestions.push('I spent $8 on Uber to campus');
-      suggestions.push('I spent $25 on textbooks');
     }
 
-    return suggestions.slice(0, 3); // Limit to 3 suggestions
-  }
-
-  /**
-   * Check if AI service is available
-   * @returns boolean
-   */
-  isAvailable(): boolean {
-    return this.isInitialized;
+    return suggestions.slice(0, 3);
   }
 }
 
-// Export singleton instance
-export const aiService = new AIService();
+// Export singleton instance (renamed for compatibility)
+export const aiService = new SmartAIService();
+
+// Additional exports for backward compatibility
+export type { SmartAIResponse as AIExpenseProcessing };
+export { SmartAIService as AIService };
