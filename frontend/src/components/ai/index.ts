@@ -1,12 +1,12 @@
 /**
- * AI Components Index
- * Centralized exports for all AI-related components
+ * AI Chat Module Exports
+ * 
+ * Clean barrel exports for the AI chat components
  */
 
-export { AIChat } from './AIChat';
-export { default as AIChatTest } from './AIChatTest';
-
-// Future AI components will be exported here:
-// export { VoiceInput } from './VoiceInput';
-// export { ProactiveInsights } from './ProactiveInsights';
-// export { SpendingPatterns } from './SpendingPatterns';
+export { AIChat as default } from './AIChat';
+export { ChatHeader } from './chat/ChatHeader';
+export { ChatMessages } from './chat/ChatMessages';
+export { ChatMessage } from './chat/ChatMessage';
+export { ChatInput } from './chat/ChatInput';
+export * from './chat/useChatHooks';
