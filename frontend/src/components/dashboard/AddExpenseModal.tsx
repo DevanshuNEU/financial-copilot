@@ -19,9 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { useSecureForm, useSecureApi } from '../../components/security';
-import { validateExpenseData } from '../../utils/security';
-import { Expense } from '../../types';
 import toast from 'react-hot-toast';
 import { useAppData } from '../../contexts/AppDataContext';
 
