@@ -6,8 +6,6 @@
  */
 
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useAppData } from '../contexts/AppDataContext';
 import DashboardLayout from '../components/dashboard/layout';
 import AddExpenseModal from '../components/dashboard/AddExpenseModal';
 import { 
@@ -15,8 +13,6 @@ import {
 } from '../components/loading';
 
 const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
-  const { appData } = useAppData();
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
 
   return (
