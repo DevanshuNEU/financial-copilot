@@ -7,6 +7,8 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAppData } from '../../../contexts/AppDataContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { 
   Home, 
   BarChart3, 
@@ -33,6 +35,8 @@ const navigationItems: NavItem[] = [
 export const GlassmorphismNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { appData } = useAppData();
+  const { user } = useAuth();
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -88,8 +92,12 @@ export const GlassmorphismNav: React.FC = () => {
             {/* User Avatar */}
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
-                <div className="text-sm font-medium text-gray-900">dev@gmail.com</div>
-                <div className="text-xs text-gray-500">Student</div>
+                <div className="text-sm font-medium text-gray-900">
+                  {appData.user?.email || user?.email || 'dev@gmail.com'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {appData.user?.studentType === 'international' ? 'International Student' : 'Student'}
+                </div>
               </div>
               <button className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-medium hover:bg-green-600 transition-colors">
                 <User className="w-4 h-4" />
