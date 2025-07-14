@@ -54,12 +54,9 @@ function App() {
             {/* Protected Routes - Authentication + Onboarding Required */}
             <Route path="/dashboard" element={
               <ProtectedRoute requireOnboarding>
-                <div className="min-h-screen bg-gray-50">
-                  <Navigation />
-                  <PageErrorBoundary>
-                    <DashboardPage />
-                  </PageErrorBoundary>
-                </div>
+                <PageErrorBoundary>
+                  <DashboardPage />
+                </PageErrorBoundary>
               </ProtectedRoute>
             } />
             
