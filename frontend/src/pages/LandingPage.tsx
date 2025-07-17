@@ -1,8 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { TypeAnimation } from 'react-type-animation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { LiquidGlassSVG } from '@/components/ui/LiquidGlassSVG';
+import { UnifiedFloatingNav } from '../components/navigation/UnifiedFloatingNav';
 import { 
   ArrowRight, 
   CheckCircle, 
@@ -68,84 +71,52 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50">
-      {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Financial Copilot</h1>
-                <p className="text-xs text-gray-500">Smart money for students</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                onClick={handleSignIn}
-                className="text-gray-600 hover:text-green-600"
-              >
-                Sign In
-              </Button>
-              <Button 
-                onClick={handleGetStarted}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                Get Started Free
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* SVG Filters for Liquid Glass Effects */}
+      <LiquidGlassSVG />
+      
+      {/* Unified Floating Navigation */}
+      <UnifiedFloatingNav 
+        mode="public" 
+        onGetStarted={handleGetStarted}
+        onSignIn={handleSignIn}
+      />
 
       {/* Hero Section */}
-      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
+      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
+        <div className="max-w-6xl mx-auto w-full">
           <div className="text-center">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-6"
-            >
-              <Globe className="h-4 w-4" />
-              Built for International Students
-            </motion.div>
+            {/* Removed international student badge - keeping it clean */}
             
             <motion.h1 
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight"
+              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-8 leading-tight tracking-tight"
             >
-              Stop feeling guilty about
-              <span className="text-green-600 block">every purchase</span>
+              Financial confidence
+              <br />
+              <span className="text-green-600">for every student</span>
             </motion.h1>
-            
-            <motion.p 
+
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed"
+              className="text-xl sm:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed font-light"
             >
-              Financial Copilot helps international students manage money with 
-              <strong className="text-gray-900"> confidence, not fear</strong>. 
-              Know exactly what you can spend today.
+              Know exactly what you can spend today. Make every purchase with confidence, not guilt.
             </motion.p>
-            
+
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
             >
               <Button 
                 size="lg"
                 onClick={handleGetStarted}
-                className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                className="glass-button-primary px-8 py-4 text-lg font-semibold rounded-lg liquid-transition hover:scale-105"
               >
                 Start Your Financial Journey
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -154,7 +125,7 @@ const LandingPage: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="lg"
-                className="px-8 py-4 text-lg border-2 hover:bg-gray-50 hover:scale-105 transition-transform duration-200"
+                className="glass-button-secondary px-8 py-4 text-lg border-2 rounded-lg liquid-transition hover:scale-105"
               >
                 Watch Demo
               </Button>
@@ -164,19 +135,19 @@ const LandingPage: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.8 }}
-              className="flex items-center justify-center gap-6 text-sm text-gray-500"
+              className="flex items-center justify-center gap-8 text-sm text-gray-500"
             >
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Always Free</span>
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span className="font-medium">Always Free</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>No Credit Card</span>
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span className="font-medium">No Credit Card</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>2-Minute Setup</span>
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span className="font-medium">2-Minute Setup</span>
               </div>
             </motion.div>
           </div>
@@ -319,7 +290,7 @@ const LandingPage: React.FC = () => {
             <Button 
               size="lg"
               onClick={handleGetStarted}
-              className="bg-white text-green-600 hover:bg-gray-50 px-8 py-4 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+              className="glass-button-primary px-8 py-4 text-lg font-semibold rounded-lg liquid-transition hover:scale-105"
             >
               Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />

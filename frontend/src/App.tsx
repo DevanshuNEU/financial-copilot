@@ -6,10 +6,11 @@ import { AppDataProvider } from './contexts/AppDataContext';
 import { ErrorProvider } from './contexts/ErrorContext';
 import { AppErrorBoundary, PageErrorBoundary } from './components/error';
 import { initializeSecurity } from './components/security';
-import Navigation from './components/navigation/Navigation';
 import ScrollToTop from './components/ui/ScrollToTop';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AuthPage from './pages/auth/AuthPage';
+import { MainLayout } from './components/layout/MainLayout'; // New unified layout
+import './styles/glassmorphism.css'; // Import glassmorphism styles
 import { 
   LandingPage,
   DashboardPage, 
@@ -54,53 +55,51 @@ function App() {
             {/* Protected Routes - Authentication + Onboarding Required */}
             <Route path="/dashboard" element={
               <ProtectedRoute requireOnboarding>
-                <PageErrorBoundary>
-                  <DashboardPage />
-                </PageErrorBoundary>
+                <MainLayout>
+                  <PageErrorBoundary>
+                    <DashboardPage />
+                  </PageErrorBoundary>
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/analytics" element={
               <ProtectedRoute requireOnboarding>
-                <div className="min-h-screen bg-gray-50">
-                  <Navigation />
+                <MainLayout>
                   <PageErrorBoundary>
                     <AnalyticsPage />
                   </PageErrorBoundary>
-                </div>
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/budget" element={
               <ProtectedRoute requireOnboarding>
-                <div className="min-h-screen bg-gray-50">
-                  <Navigation />
+                <MainLayout>
                   <PageErrorBoundary>
                     <BudgetPage />
                   </PageErrorBoundary>
-                </div>
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/expenses" element={
               <ProtectedRoute requireOnboarding>
-                <div className="min-h-screen bg-gray-50">
-                  <Navigation />
+                <MainLayout>
                   <PageErrorBoundary>
                     <ExpensesPage />
                   </PageErrorBoundary>
-                </div>
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/settings" element={
               <ProtectedRoute requireOnboarding>
-                <div className="min-h-screen bg-gray-50">
-                  <Navigation />
+                <MainLayout>
                   <PageErrorBoundary>
                     <SettingsPage />
                   </PageErrorBoundary>
-                </div>
+                </MainLayout>
               </ProtectedRoute>
             } />
           </Routes>

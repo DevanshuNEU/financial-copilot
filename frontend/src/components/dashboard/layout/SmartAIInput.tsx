@@ -187,7 +187,7 @@ export const SmartAIInput: React.FC<SmartAIInputProps> = ({ className = '' }) =>
     <div className={`space-y-4 ${className}`}>
       {/* Main Input Field - Clean & Minimal with INVISIBLE AI */}
       <form onSubmit={handleSubmit} className="relative">
-        <div className="flex items-center bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-sm hover:shadow-md focus-within:shadow-lg focus-within:border-green-300/50 transition-all duration-300">
+        <div className="liquid-input glass-lg flex items-center liquid-transition hover:glass-xl focus-within:glass-xl focus-within:shadow-lg">
           <input
             ref={inputRef}
             type="text"
@@ -221,7 +221,7 @@ export const SmartAIInput: React.FC<SmartAIInputProps> = ({ className = '' }) =>
           <button
             key={index}
             onClick={() => handleSuggestionClick(suggestion)}
-            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm transition-colors"
+            className="glass-sm liquid-transition px-3 py-1 text-gray-700 rounded-full text-sm hover:glass-md"
           >
             {suggestion}
           </button>

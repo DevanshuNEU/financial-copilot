@@ -43,12 +43,12 @@ export const GlassmorphismNav: React.FC = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 border-b border-green-100/50 shadow-sm">
+    <nav className="liquid-nav glass-lg sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center liquid-reflection">
               <span className="text-white font-bold text-sm">$</span>
             </div>
             <span className="text-xl font-semibold text-gray-900">
@@ -67,10 +67,10 @@ export const GlassmorphismNav: React.FC = () => {
                   key={item.id}
                   onClick={() => handleNavigation(item.path)}
                   className={`
-                    flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200
+                    liquid-nav-button flex items-center space-x-2 px-4 py-2 rounded-lg liquid-transition
                     ${isActive 
-                      ? 'bg-green-500/10 text-green-700 backdrop-blur-sm' 
-                      : 'text-gray-600 hover:text-green-600 hover:bg-green-50/50'
+                      ? 'active glass-md' 
+                      : 'glass-sm hover:glass-md'
                     }
                   `}
                 >
@@ -84,7 +84,7 @@ export const GlassmorphismNav: React.FC = () => {
           {/* User Profile */}
           <div className="flex items-center space-x-4">
             {/* AI Status */}
-            <div className="hidden sm:flex items-center space-x-2 text-xs text-green-600">
+            <div className="hidden sm:flex items-center space-x-2 text-xs text-green-600 glass-sm px-3 py-1 rounded-full">
               <Wifi className="w-3 h-3" />
               <span>AI Online</span>
             </div>
@@ -99,7 +99,7 @@ export const GlassmorphismNav: React.FC = () => {
                   {appData.user?.studentType === 'international' ? 'International Student' : 'Student'}
                 </div>
               </div>
-              <button className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-medium hover:bg-green-600 transition-colors">
+              <button className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-medium hover:bg-green-600 liquid-transition liquid-reflection">
                 <User className="w-4 h-4" />
               </button>
             </div>

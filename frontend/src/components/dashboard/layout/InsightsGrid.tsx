@@ -113,7 +113,7 @@ export const InsightsGrid: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
         
         {/* Health Score */}
-        <div className="bg-green-50 rounded-2xl p-6 text-center">
+        <div className="liquid-card glass-md liquid-gradient p-6 text-center relative overflow-hidden">
           <h3 className="text-green-800 font-medium mb-2">Health Score</h3>
           <div className="text-3xl font-light text-green-700 mb-1">
             {studentMetrics.isLoading ? (
@@ -126,7 +126,7 @@ export const InsightsGrid: React.FC = () => {
         </div>
 
         {/* Tracking Streak */}
-        <div className="bg-blue-50 rounded-2xl p-6 text-center">
+        <div className="liquid-card glass-md liquid-gradient p-6 text-center relative overflow-hidden">
           <h3 className="text-blue-800 font-medium mb-2">Tracking Streak</h3>
           <div className="text-3xl font-light text-blue-700 mb-1">
             {studentMetrics.isLoading ? (
@@ -168,7 +168,7 @@ export const InsightsGrid: React.FC = () => {
             </div>
           ) : recentTransactions.length > 0 ? (
             recentTransactions.map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
+              <div key={transaction.id} className="liquid-card-subtle glass-sm flex items-center justify-between p-3 liquid-transition">
                 <div>
                   <div className="font-medium text-gray-900">{transaction.description}</div>
                   <div className="text-sm text-gray-500">{transaction.timeLabel}</div>
