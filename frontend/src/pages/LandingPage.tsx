@@ -1,32 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TypeAnimation } from 'react-type-animation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { LiquidGlassSVG } from '@/components/ui/LiquidGlassSVG';
 import { UnifiedFloatingNav } from '../components/navigation/UnifiedFloatingNav';
+import ExpenseSinkLogo from '../components/branding/ExpenseSinkLogo';
+import AnimationErrorBoundary from '../components/ui/AnimationErrorBoundary';
 import { 
   ArrowRight, 
   CheckCircle, 
-  DollarSign, 
-  Heart, 
-  Smartphone, 
-  TrendingUp,
   Users,
-  Globe,
-  Calculator,
   Sparkles,
-  PieChart,
-  BarChart3,
-  Zap,
-  Target,
-  Coffee,
-  ShoppingBag,
-  Home,
-  Car,
-  Utensils
+  Lightbulb
 } from 'lucide-react';
+
+// Import our LEGENDARY animation system
+import { 
+  createAnimationVariants,
+  createStaggeredVariants,
+  createChildVariants,
+  createTransition,
+  getStaggeredDelay,
+  VIEWPORT_CONFIG,
+  PERFORMANCE_PROPS,
+  getAccessibleVariants,
+} from '../lib/animations';
+
+// Import clean data
+import { 
+  featuresData, 
+  testimonialsData, 
+  trustIndicatorsData,
+  dashboardScreensData, 
+  categoriesData 
+} from '../data';
+
+// Create animation variants for different sections
+const heroVariants = getAccessibleVariants(createAnimationVariants('HERO'));
+const primaryVariants = getAccessibleVariants(createAnimationVariants('PRIMARY'));
+const secondaryVariants = getAccessibleVariants(createAnimationVariants('SECONDARY'));
+const subtleVariants = getAccessibleVariants(createAnimationVariants('SUBTLE'));
+
+// Staggered variants for grid layouts
+const staggeredPrimary = getAccessibleVariants(createStaggeredVariants('PRIMARY'));
+const staggeredSecondary = getAccessibleVariants(createStaggeredVariants('SECONDARY'));
+const childPrimary = getAccessibleVariants(createChildVariants('PRIMARY'));
+const childSecondary = getAccessibleVariants(createChildVariants('SECONDARY'));
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -37,7 +57,7 @@ const LandingPage: React.FC = () => {
   // Auto-cycle through dashboard screens
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentDashboard((prev) => (prev + 1) % 4);
+      setCurrentDashboard((prev) => (prev + 1) % dashboardScreensData.length);
     }, 4000); // Change every 4 seconds
     return () => clearInterval(interval);
   }, []);
@@ -49,91 +69,6 @@ const LandingPage: React.FC = () => {
   const handleSignIn = () => {
     navigate('/auth');
   };
-
-  // Mock dashboard data
-  const dashboardScreens = [
-    {
-      title: "Safe to Spend Today",
-      mainValue: "$43.20",
-      subtitle: "Based on your spending patterns",
-      insight: "✨ You're 15% under budget this week!",
-      chart: "spending",
-      color: "green"
-    },
-    {
-      title: "Monthly Overview",
-      mainValue: "$1,247",
-      subtitle: "Total spending this month",
-      insight: "📊 Your best month yet - great job!",
-      chart: "categories",
-      color: "blue"
-    },
-    {
-      title: "Smart Insights",
-      mainValue: "23%",
-      subtitle: "Money saved vs last month",
-      insight: "🎯 You're building amazing habits!",
-      chart: "trends",
-      color: "purple"
-    },
-    {
-      title: "Budget Health",
-      mainValue: "Excellent",
-      subtitle: "Overall financial wellness",
-      insight: "🚀 You're on track to save $500 this month!",
-      chart: "health",
-      color: "emerald"
-    }
-  ];
-
-  const categories = [
-    { name: "Food", amount: 342, icon: Utensils, color: "bg-orange-500" },
-    { name: "Transport", amount: 128, icon: Car, color: "bg-blue-500" },
-    { name: "Coffee", amount: 89, icon: Coffee, color: "bg-amber-500" },
-    { name: "Shopping", amount: 256, icon: ShoppingBag, color: "bg-purple-500" },
-    { name: "Housing", amount: 680, icon: Home, color: "bg-green-500" },
-  ];
-
-  const features = [
-    {
-      icon: DollarSign,
-      title: "Safe to Spend Calculator",
-      description: "Know exactly how much you can spend today without going over budget"
-    },
-    {
-      icon: Heart,
-      title: "Guilt-Free Budgeting", 
-      description: "Encouraging insights that empower, never restrict or shame"
-    },
-    {
-      icon: TrendingUp,
-      title: "Real-Time Analytics",
-      description: "Beautiful charts showing your financial progress and patterns"
-    },
-    {
-      icon: Smartphone,
-      title: "Mobile-First Design",
-      description: "Perfect for students who manage money on their phones"
-    }
-  ];
-
-  const testimonials = [
-    {
-      quote: "Finally! A budgeting app that doesn't make me feel guilty about every purchase.",
-      author: "Priya S.",
-      role: "International Student, Boston University"
-    },
-    {
-      quote: "The Safe to Spend feature changed everything. I actually know what I can afford now.",
-      author: "Ahmed K.", 
-      role: "Graduate Student, MIT"
-    },
-    {
-      quote: "Clean design, encouraging messages. This feels like it was made for students like me.",
-      author: "Sofia M.",
-      role: "Exchange Student, Harvard"
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50">
@@ -147,60 +82,69 @@ const LandingPage: React.FC = () => {
         onSignIn={handleSignIn}
       />
 
-      {/* Hero Section */}
-      <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
+      {/* Hero Section - Keep as is, user loves it */}
+      <section className="pt-20 pb-12 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
         <div className="max-w-6xl mx-auto w-full">
           <div className="text-center">
             {/* Removed international student badge - keeping it clean */}
             
-            <motion.h1 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-8 leading-tight tracking-tight"
-            >
-              Financial confidence
-              <br />
-              <span className="text-green-600">for every student</span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="text-xl sm:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed font-light"
-            >
-              Know exactly what you can spend today. Make every purchase with confidence, not guilt.
-            </motion.p>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
-            >
-              <Button 
-                size="lg"
-                onClick={handleGetStarted}
-                className="glass-button-primary px-8 py-4 text-lg font-semibold rounded-lg liquid-transition hover:scale-105"
+            <AnimationErrorBoundary>
+              <motion.h1 
+                initial="hidden"
+                animate="visible"
+                variants={heroVariants}
+                transition={createTransition('HERO', 0.1)}
+                {...PERFORMANCE_PROPS}
+                className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-8 leading-tight tracking-tight font-heading"
               >
-                Start Your Financial Journey
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="glass-button-secondary px-8 py-4 text-lg border-2 rounded-lg liquid-transition hover:scale-105"
+                Financial confidence
+                <br />
+                <span className="text-green-600">for every student</span>
+              </motion.h1>
+
+              <motion.p
+                initial="hidden"
+                animate="visible"
+                variants={heroVariants}
+                transition={createTransition('HERO', 0.3)}
+                {...PERFORMANCE_PROPS}
+                className="text-xl sm:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed font-light font-body"
+              >
+                Know exactly what you can spend today. Make every purchase with confidence, not guilt.
+              </motion.p>
+
+              <motion.div 
+                initial="hidden"
+                animate="visible"
+                variants={heroVariants}
+                transition={createTransition('HERO', 0.5)}
+                {...PERFORMANCE_PROPS}
+                className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+              >
+                <Button 
+                  size="lg"
+                  onClick={handleGetStarted}
+                  className="glass-button-primary px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-200 hover:shadow-lg"
+                >
+                  Start Your Financial Journey
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="glass-button-secondary px-8 py-4 text-lg border-2 rounded-lg transition-all duration-200 hover:shadow-lg"
               >
                 Watch Demo
               </Button>
             </motion.div>
             
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
+              initial="hidden"
+              animate="visible"
+              variants={subtleVariants}
+              transition={createTransition('SUBTLE', 0.7)}
+              {...PERFORMANCE_PROPS}
               className="flex items-center justify-center gap-8 text-sm text-gray-500"
             >
               <div className="flex items-center gap-2">
@@ -216,74 +160,57 @@ const LandingPage: React.FC = () => {
                 <span className="font-medium">2-Minute Setup</span>
               </div>
             </motion.div>
+            </AnimationErrorBoundary>
           </div>
         </div>
       </section>
 
-      {/* Animated Demo Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-green-50 to-blue-50">
-          <motion.div
-            className="absolute inset-0 opacity-30"
-            animate={{
-              background: [
-                'radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.3) 0%, transparent 50%)',
-                'radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)',
-                'radial-gradient(circle at 40% 80%, rgba(168, 85, 247, 0.3) 0%, transparent 50%)',
-                'radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.3) 0%, transparent 50%)',
-              ],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut"
+      {/* Animated Demo Section - Professional & Elegant */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* Sophisticated Background - Subtle and Professional */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-green-50/30">
+          {/* Removed excessive animated background - keeping it elegant */}
+          <div className="absolute inset-0 opacity-[0.01]" style={{
+            backgroundImage: `
+              radial-gradient(circle at 25% 25%, rgba(16, 185, 129, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 75% 75%, rgba(6, 182, 212, 0.3) 0%, transparent 50%)
+            `,
+          }} />
+          
+          {/* Subtle Geometric Pattern */}
+          <div 
+            className="absolute inset-0 opacity-[0.015]"
+            style={{
+              backgroundImage: `
+                linear-gradient(90deg, rgba(16, 185, 129, 0.1) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(16, 185, 129, 0.1) 1px, transparent 1px)
+              `,
+              backgroundSize: '60px 60px'
             }}
           />
-          
-          {/* Floating Shapes */}
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-32 h-32 bg-white bg-opacity-10 rounded-full backdrop-blur-sm"
-              animate={{
-                x: [0, 100, 0],
-                y: [0, -100, 0],
-                scale: [1, 1.2, 1],
-                rotate: [0, 180, 360],
-              }}
-              transition={{
-                duration: 20 + i * 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: i * 2,
-              }}
-              style={{
-                left: `${10 + i * 15}%`,
-                top: `${20 + i * 10}%`,
-              }}
-            />
-          ))}
         </div>
         
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-12">
             <motion.h2 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-              className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6"
+              initial="hidden"
+              whileInView="visible"
+              variants={primaryVariants}
+              viewport={VIEWPORT_CONFIG.DEFAULT}
+              {...PERFORMANCE_PROPS}
+              className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 font-heading"
             >
               Experience the future of
               <span className="text-green-600 block">student finance</span>
             </motion.h2>
             <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-              className="text-xl text-gray-600 max-w-2xl mx-auto"
+              initial="hidden"
+              whileInView="visible"
+              variants={primaryVariants}
+              transition={createTransition('PRIMARY', 0.15)}
+              viewport={VIEWPORT_CONFIG.DEFAULT}
+              {...PERFORMANCE_PROPS}
+              className="text-xl text-gray-600 max-w-2xl mx-auto font-body"
             >
               Watch how EXPENSESINK transforms anxiety into confidence with intelligent insights
             </motion.p>
@@ -291,10 +218,12 @@ const LandingPage: React.FC = () => {
           
           {/* Dashboard Mockup */}
           <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
+            initial="hidden"
+            whileInView="visible"
+            variants={primaryVariants}
+            transition={createTransition('PRIMARY', 0.3)}
+            viewport={VIEWPORT_CONFIG.DEFAULT}
+            {...PERFORMANCE_PROPS}
             className="relative max-w-4xl mx-auto"
           >
             {/* Phone Frame */}
@@ -327,10 +256,10 @@ const LandingPage: React.FC = () => {
                         <div className="flex items-center justify-between mb-6">
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900">
-                              {dashboardScreens[currentDashboard].title}
+                              {dashboardScreensData[currentDashboard].title}
                             </h3>
                             <p className="text-sm text-gray-600">
-                              {dashboardScreens[currentDashboard].subtitle}
+                              {dashboardScreensData[currentDashboard].subtitle}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
@@ -347,7 +276,7 @@ const LandingPage: React.FC = () => {
                             transition={{ duration: 0.5, delay: 0.2 }}
                             className="text-4xl font-bold text-gray-900 mb-2"
                           >
-                            {dashboardScreens[currentDashboard].mainValue}
+                            {dashboardScreensData[currentDashboard].mainValue}
                           </motion.div>
                           <motion.div
                             initial={{ opacity: 0, y: 10 }}
@@ -355,7 +284,7 @@ const LandingPage: React.FC = () => {
                             transition={{ duration: 0.5, delay: 0.4 }}
                             className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium inline-block"
                           >
-                            {dashboardScreens[currentDashboard].insight}
+                            {dashboardScreensData[currentDashboard].insight}
                           </motion.div>
                         </div>
                         
@@ -395,7 +324,7 @@ const LandingPage: React.FC = () => {
                           {currentDashboard === 1 && (
                             // Categories Chart
                             <div className="space-y-3">
-                              {categories.slice(0, 4).map((category, i) => (
+                              {categoriesData.slice(0, 4).map((category, i) => (
                                 <motion.div
                                   key={category.name}
                                   initial={{ opacity: 0, x: -20 }}
@@ -511,7 +440,7 @@ const LandingPage: React.FC = () => {
             
             {/* Indicators */}
             <div className="flex justify-center gap-2 mt-8">
-              {dashboardScreens.map((_, index) => (
+              {dashboardScreensData.map((_, index) => (
                 <motion.div
                   key={index}
                   className={`w-3 h-3 rounded-full cursor-pointer transition-colors ${
@@ -526,71 +455,340 @@ const LandingPage: React.FC = () => {
             
             {/* CTA */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              viewport={{ once: true }}
+              initial="hidden"
+              whileInView="visible"
+              variants={subtleVariants}
+              transition={createTransition('SUBTLE', 0.8)}
+              viewport={VIEWPORT_CONFIG.DEFAULT}
+              {...PERFORMANCE_PROPS}
               className="text-center mt-12"
             >
               <p className="text-xl text-gray-600 mb-6">
                 Transform your financial anxiety into confidence
               </p>
-              <Button 
-                onClick={handleGetStarted}
-                className="glass-button-primary px-8 py-4 text-lg font-semibold rounded-lg liquid-transition hover:scale-105"
-              >
-                Get EXPENSESINK Free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              {/* Removed "Get EXPENSESINK Free" button - felt out of place */}
             </motion.div>
           </motion.div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
+      {/* Revolutionary Features Section - Tesla/Apple Level */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-gray-50/50 to-green-50/30 relative overflow-hidden">
+        {/* Sophisticated Background Pattern */}
+        <div className="absolute inset-0">
+          <div 
+            className="absolute inset-0 opacity-[0.02]"
+            style={{
+              backgroundImage: `
+                radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 40% 60%, rgba(34, 197, 94, 0.2) 0%, transparent 40%)
+              `,
+            }}
+          />
+        </div>
+
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Built specifically for students
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Every feature designed with empathy for the international student experience
-            </p>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              variants={subtleVariants}
+              viewport={VIEWPORT_CONFIG.DEFAULT}
+              {...PERFORMANCE_PROPS}
+              className="mb-4"
+            >
+              {/* Removed "Revolutionary Features" badge - felt odd */}
+            </motion.div>
+            
+            <motion.h2 
+              initial="hidden"
+              whileInView="visible"
+              variants={primaryVariants}
+              viewport={VIEWPORT_CONFIG.DEFAULT}
+              {...PERFORMANCE_PROPS}
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-heading leading-tight"
+            >
+              Built for students,
+              <br />
+              <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                loved by thousands
+              </span>
+            </motion.h2>
+            
+            <motion.p
+              initial="hidden"
+              whileInView="visible"
+              variants={primaryVariants}
+              transition={createTransition('PRIMARY', 0.15)}
+              viewport={VIEWPORT_CONFIG.DEFAULT}
+              {...PERFORMANCE_PROPS}
+              className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-body"
+            >
+              Every feature designed with empathy for your student journey. Transform financial stress into confidence.
+            </motion.p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            variants={staggeredPrimary}
+            viewport={VIEWPORT_CONFIG.DEFAULT}
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12"
+          >
+            {featuresData.map((feature, index) => {
               const IconComponent = feature.icon;
               return (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  viewport={{ once: true }}
+                  variants={childPrimary}
+                  {...PERFORMANCE_PROPS}
+                  className="group"
                 >
-                  <Card className="border-2 hover:border-green-200 transition-colors duration-200 hover:shadow-lg h-full">
-                    <CardContent className="p-6 text-center">
+                  <Card className={`border-2 border-gray-200 ${feature.hoverColor} transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 h-full group-hover:scale-[1.02] bg-white/90 backdrop-blur-sm`}>
+                    <CardContent className="p-6">
+                      {/* Animated Icon with Spring Physics */}
                       <motion.div 
-                        className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg mx-auto mb-4"
-                        whileHover={{ scale: 1.1 }}
-                        transition={{ type: "spring", stiffness: 300 }}
+                        className={`flex items-center justify-center w-14 h-14 bg-gradient-to-br ${feature.color} rounded-2xl mx-auto mb-6 shadow-lg`}
+                        whileHover={{ 
+                          scale: 1.1, 
+                          rotate: 2,
+                          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+                        }}
+                        transition={{ 
+                          type: "spring", 
+                          stiffness: 400, 
+                          damping: 17,
+                          mass: 0.8
+                        }}
                       >
-                        <IconComponent className="h-6 w-6 text-green-600" />
+                        <IconComponent className="h-8 w-8 text-white" />
                       </motion.div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {feature.title}
-                      </h3>
-                      <p className="text-gray-600 text-sm leading-relaxed">
-                        {feature.description}
-                      </p>
+                      
+                      {/* Feature Content */}
+                      <div className="text-center">
+                        <h3 className="text-2xl font-bold text-gray-900 mb-3 font-heading group-hover:text-emerald-700 transition-colors">
+                          {feature.title}
+                        </h3>
+                        
+                        <p className="text-gray-600 text-base leading-relaxed mb-4 font-body">
+                          {feature.description}
+                        </p>
+                        
+                        {/* Benefit Highlight */}
+                        <motion.div
+                          className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg p-4 border border-emerald-100"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          transition={createTransition('SUBTLE', index * 0.05 + 0.3)}
+                          viewport={VIEWPORT_CONFIG.DEFAULT}
+                        >
+                          <div className="flex items-center justify-center gap-2 text-emerald-700">
+                            <Lightbulb className="w-4 h-4" />
+                            <span className="text-sm font-semibold">{feature.benefit}</span>
+                          </div>
+                        </motion.div>
+                      </div>
+                      
+                      {/* Hover Effect Overlay */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                        initial={false}
+                      />
                     </CardContent>
                   </Card>
                 </motion.div>
               );
             })}
+          </motion.div>
+          
+          {/* Call-to-Action */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            variants={primaryVariants}
+            viewport={VIEWPORT_CONFIG.DEFAULT}
+            {...PERFORMANCE_PROPS}
+            className="text-center mt-16"
+          >
+            <Button
+              size="lg"
+              onClick={handleGetStarted}
+              className="glass-button-primary px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-200 hover:shadow-lg"
+            >
+              Experience EXPENSESINK Today
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Revolutionary Social Proof Section - More Compact */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-emerald-50/50 via-green-50/30 to-teal-50/50 relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="absolute inset-0">
+          <motion.div
+            className="absolute inset-0 opacity-20"
+            animate={{
+              background: [
+                'radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.3) 0%, transparent 50%)',
+                'radial-gradient(circle at 80% 70%, rgba(6, 182, 212, 0.3) 0%, transparent 50%)',
+                'radial-gradient(circle at 40% 20%, rgba(34, 197, 94, 0.3) 0%, transparent 50%)',
+                'radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.3) 0%, transparent 50%)',
+              ],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        </div>
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          {/* Trust Indicators */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            variants={primaryVariants}
+            viewport={VIEWPORT_CONFIG.DEFAULT}
+            {...PERFORMANCE_PROPS}
+            className="text-center mb-20"
+          >
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 mb-8 font-heading">
+              Trusted by students
+              <br />
+              <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                worldwide
+              </span>
+            </h2>
+            
+            {/* Professional Trust Indicators - Classy Layout */}
+            <motion.div 
+              initial="hidden"
+              whileInView="visible"
+              variants={staggeredSecondary}
+              viewport={VIEWPORT_CONFIG.DEFAULT}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto"
+            >
+              {trustIndicatorsData.map((indicator, index) => {
+                const IconComponent = indicator.icon;
+                return (
+                  <motion.div
+                    key={indicator.id}
+                    variants={childSecondary}
+                    {...PERFORMANCE_PROPS}
+                    className="group"
+                  >
+                    <Card className="border border-gray-200 hover:border-emerald-300 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 bg-white/90 backdrop-blur-sm hover-lift">
+                      <CardContent className="p-8 text-center">
+                        <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-500 rounded-2xl mx-auto mb-6 shadow-lg">
+                          <IconComponent className="h-8 w-8 text-white" />
+                        </div>
+                        
+                        <div className="text-3xl font-bold text-gray-900 mb-2 font-heading">
+                          {indicator.value}
+                        </div>
+                        
+                        <div className="text-lg font-semibold text-emerald-600 mb-3 font-body">
+                          {indicator.label}
+                        </div>
+                        
+                        <div className="text-sm text-gray-600 leading-relaxed font-body">
+                          {indicator.description}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </motion.div>
+
+          {/* Enhanced Testimonials */}
+          <div className="text-center mb-16">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              variants={subtleVariants}
+              viewport={VIEWPORT_CONFIG.DEFAULT}
+              {...PERFORMANCE_PROPS}
+              className="mb-6"
+            >
+              <span className="inline-flex items-center px-4 py-2 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold tracking-wide uppercase">
+                <Users className="w-4 h-4 mr-2" />
+                Student Stories
+              </span>
+            </motion.div>
+            
+            <h3 className="text-3xl sm:text-4xl font-black text-gray-900 mb-4 font-heading">
+              Real students, real results
+            </h3>
+            <p className="text-xl text-gray-600 font-body">
+              Join thousands of students who transformed their financial anxiety into confidence
+            </p>
           </div>
+          
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            variants={staggeredSecondary}
+            viewport={VIEWPORT_CONFIG.DEFAULT}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
+            {testimonialsData.slice(0, 6).map((testimonial, index) => (
+              <motion.div
+                key={testimonial.id}
+                variants={childSecondary}
+                {...PERFORMANCE_PROPS}
+                className="group"
+              >
+                <Card className="border-2 border-gray-100 hover:border-emerald-200 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 h-full bg-white/90 backdrop-blur-sm group-hover:scale-[1.02]">
+                  <CardContent className="p-6">
+                    {/* Rating Stars */}
+                    <div className="flex items-center gap-1 mb-4">
+                      {[...Array(testimonial.rating)].map((_, i) => (
+                        <motion.div 
+                          key={i} 
+                          className="w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full"
+                          initial={{ scale: 0 }}
+                          whileInView={{ scale: 1 }}
+                          transition={createTransition('SUBTLE', index * 0.05 + i * 0.02)}
+                          viewport={VIEWPORT_CONFIG.DEFAULT}
+                        />
+                      ))}
+                      {testimonial.verified && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          transition={createTransition('SUBTLE', index * 0.05 + 0.3)}
+                          viewport={VIEWPORT_CONFIG.DEFAULT}
+                          className="ml-2 flex items-center text-emerald-600"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          <span className="text-xs font-medium">Verified</span>
+                        </motion.div>
+                      )}
+                    </div>
+                    
+                    <blockquote className="text-gray-900 mb-4 italic font-body leading-relaxed">
+                      "{testimonial.quote}"
+                    </blockquote>
+                    
+                    <div className="border-t border-gray-100 pt-4">
+                      <div className="font-semibold text-gray-900 font-heading">{testimonial.author}</div>
+                      <div className="text-sm text-gray-600 font-body">{testimonial.role}</div>
+                      {testimonial.university && (
+                        <div className="text-xs text-emerald-600 font-semibold mt-1">
+                          {testimonial.university}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
@@ -598,16 +796,16 @@ const LandingPage: React.FC = () => {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-4 font-heading">
               Loved by students worldwide
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 font-body">
               Join thousands of international students taking control of their finances
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
+            {testimonialsData.slice(0, 3).map((testimonial, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -635,6 +833,9 @@ const LandingPage: React.FC = () => {
                     <div>
                       <div className="font-semibold text-gray-900">{testimonial.author}</div>
                       <div className="text-sm text-gray-600">{testimonial.role}</div>
+                      {testimonial.university && (
+                        <div className="text-xs text-emerald-600 font-medium">{testimonial.university}</div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -647,10 +848,10 @@ const LandingPage: React.FC = () => {
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-green-600 to-green-700">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
+          <h2 className="text-3xl sm:text-4xl font-black text-white mb-6 font-heading">
             Ready to take control of your finances?
           </h2>
-          <p className="text-xl text-green-100 mb-8 leading-relaxed">
+          <p className="text-xl text-green-100 mb-8 leading-relaxed font-body">
             Join the financial awareness revolution. No guilt, no restrictions, just empowerment.
           </p>
           
@@ -658,7 +859,7 @@ const LandingPage: React.FC = () => {
             <Button 
               size="lg"
               onClick={handleGetStarted}
-              className="glass-button-primary px-8 py-4 text-lg font-semibold rounded-lg liquid-transition hover:scale-105"
+              className="glass-button-primary px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-200 hover:shadow-lg"
             >
               Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -678,19 +879,14 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Premium Footer */}
+      <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-300 py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 bg-green-600 rounded-lg">
-                <DollarSign className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-semibold">Financial Copilot</span>
-            </div>
+            <ExpenseSinkLogo variant="white" size="md" animated={false} />
             
-            <div className="text-sm text-gray-500">
-              💚 Made with love for international students
+            <div className="text-sm text-gray-400 font-body">
+              💚 Made with love for students worldwide
             </div>
           </div>
         </div>
