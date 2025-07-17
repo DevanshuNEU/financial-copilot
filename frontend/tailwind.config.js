@@ -17,6 +17,14 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        'jakarta': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        'satoshi': ['Satoshi', 'system-ui', 'sans-serif'],
+        'dm': ['DM Sans', 'system-ui', 'sans-serif'],
+        'heading': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        'body': ['DM Sans', 'system-ui', 'sans-serif'],
+        'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
