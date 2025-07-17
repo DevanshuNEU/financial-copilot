@@ -101,8 +101,8 @@ export const UnifiedFloatingNav: React.FC<UnifiedNavProps> = ({
       <LiquidGlassSVG />
       
       <nav className={`
-        fixed top-6 left-1/2 transform -translate-x-1/2 z-50 
-        liquid-transition w-[90%] max-w-4xl
+        fixed top-6 left-1/2 z-50 w-[90%] max-w-4xl
+        transition-all duration-300 ease-out
         ${scrolled 
           ? 'glass-xl shadow-2xl' 
           : 'glass-lg shadow-xl'
@@ -110,7 +110,9 @@ export const UnifiedFloatingNav: React.FC<UnifiedNavProps> = ({
       `}
       style={{
         height: '72px',
-        borderRadius: '36px'
+        borderRadius: '36px',
+        transform: 'translateX(-50%)', // Fixed transform - prevents gliding
+        willChange: 'auto' // Prevents unnecessary transform optimization
       }}>
       <div className="h-full flex items-center justify-between px-8">
         
@@ -118,13 +120,13 @@ export const UnifiedFloatingNav: React.FC<UnifiedNavProps> = ({
         <button
           onClick={() => mode === 'public' ? navigate('/') : handleNavigation('/dashboard')}
           className="flex items-center space-x-3 group"
-          title="Financial Copilot"
+          title="EXPENSESINK"
         >
-          <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-md liquid-transition hover:shadow-lg hover:scale-105">
-            <span className="text-white font-bold text-xl group-hover:scale-110 transition-transform">$</span>
+          <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-md transition-shadow duration-200 hover:shadow-lg">
+            <span className="text-white font-bold text-xl transition-transform duration-200 group-hover:scale-110">$</span>
           </div>
           <div className="hidden sm:block">
-            <div className="text-lg font-semibold text-gray-900 tracking-tight">Financial Copilot</div>
+            <div className="text-lg font-semibold text-gray-900 tracking-tight">EXPENSESINK</div>
             <div className="text-xs text-emerald-600 font-medium">Smart Finance AI</div>
           </div>
         </button>
@@ -234,13 +236,13 @@ export const UnifiedFloatingNav: React.FC<UnifiedNavProps> = ({
             <Button 
               variant="ghost" 
               onClick={onSignIn}
-              className="glass-button-secondary text-gray-700 hover:text-emerald-600 px-4 py-2 rounded-xl liquid-transition"
+              className="glass-button-secondary text-gray-700 hover:text-emerald-600 px-4 py-2 rounded-xl transition-colors duration-200"
             >
               Sign In
             </Button>
             <Button 
               onClick={onGetStarted}
-              className="glass-button-primary px-6 py-2 rounded-xl liquid-transition hover:scale-105"
+              className="glass-button-primary px-6 py-2 rounded-xl transition-all duration-200 hover:shadow-lg"
             >
               Get Started Free
             </Button>
