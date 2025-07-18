@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
@@ -10,20 +10,28 @@ import ScrollToTop from './components/ui/ScrollToTop';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AuthPage from './pages/auth/AuthPage';
 import { MainLayout } from './components/layout/MainLayout'; // New unified layout
+import { LandingPage } from './pages'; // Keep landing page for immediate loading
 import './styles/glassmorphism.css'; // Import glassmorphism styles
-import { 
-  LandingPage,
-  DashboardPage, 
-  AnalyticsPage, 
-  BudgetPage, 
-  ExpensesPage, 
-  SettingsPage 
-} from './pages';
-import OnboardingPage from './pages/OnboardingPage';
 import './App.css';
+import './utils/databaseSwitcher'; // Import the database switcher utility
 
-// Import the database switcher utility
-import './utils/databaseSwitcher';
+// 🚀 PERFORMANCE OPTIMIZATION: Lazy load dashboard pages for faster initial load
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
+const BudgetPage = React.lazy(() => import('./pages/BudgetPage'));
+const ExpensesPage = React.lazy(() => import('./pages/ExpensesPage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const OnboardingPage = React.lazy(() => import('./pages/OnboardingPage'));
+
+// Loading component for lazy-loaded pages
+const PageLoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-green-50">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+      <p className="text-gray-600 font-medium">Loading EXPENSESINK...</p>
+    </div>
+  </div>
+);
 
 function App() {
   // Initialize security on app start
@@ -47,7 +55,9 @@ function App() {
             <Route path="/onboarding" element={
               <ProtectedRoute>
                 <PageErrorBoundary>
-                  <OnboardingPage />
+                  <Suspense fallback={<PageLoadingSpinner />}>
+                    <OnboardingPage />
+                  </Suspense>
                 </PageErrorBoundary>
               </ProtectedRoute>
             } />
@@ -57,7 +67,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <MainLayout>
                   <PageErrorBoundary>
-                    <DashboardPage />
+                    <Suspense fallback={<PageLoadingSpinner />}>
+                      <DashboardPage />
+                    </Suspense>
                   </PageErrorBoundary>
                 </MainLayout>
               </ProtectedRoute>
@@ -67,7 +79,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <MainLayout>
                   <PageErrorBoundary>
-                    <AnalyticsPage />
+                    <Suspense fallback={<PageLoadingSpinner />}>
+                      <AnalyticsPage />
+                    </Suspense>
                   </PageErrorBoundary>
                 </MainLayout>
               </ProtectedRoute>
@@ -77,7 +91,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <MainLayout>
                   <PageErrorBoundary>
-                    <BudgetPage />
+                    <Suspense fallback={<PageLoadingSpinner />}>
+                      <BudgetPage />
+                    </Suspense>
                   </PageErrorBoundary>
                 </MainLayout>
               </ProtectedRoute>
@@ -87,7 +103,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <MainLayout>
                   <PageErrorBoundary>
-                    <ExpensesPage />
+                    <Suspense fallback={<PageLoadingSpinner />}>
+                      <ExpensesPage />
+                    </Suspense>
                   </PageErrorBoundary>
                 </MainLayout>
               </ProtectedRoute>
@@ -97,7 +115,9 @@ function App() {
               <ProtectedRoute requireOnboarding>
                 <MainLayout>
                   <PageErrorBoundary>
-                    <SettingsPage />
+                    <Suspense fallback={<PageLoadingSpinner />}>
+                      <SettingsPage />
+                    </Suspense>
                   </PageErrorBoundary>
                 </MainLayout>
               </ProtectedRoute>
