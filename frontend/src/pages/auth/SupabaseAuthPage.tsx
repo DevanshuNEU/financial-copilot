@@ -99,10 +99,10 @@ const SupabaseAuthPage: React.FC = () => {
         {/* Logo and Header */}
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-green-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">FC</span>
+            <span className="text-white font-bold text-lg">ES</span>
           </div>
           <h1 className="mt-4 text-3xl font-bold text-gray-900">
-            Financial Copilot
+            EXPENSESINK
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             Smart money management for students

@@ -1,4 +1,4 @@
-// OAuth authentication buttons for Financial Copilot (Deprecated)
+// OAuth authentication buttons for EXPENSESINK (Deprecated)
 // Note: This component is deprecated, using Supabase auth directly instead
 
 import React from 'react';

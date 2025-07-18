@@ -1,4 +1,4 @@
-// Supabase client configuration for Financial Copilot
+// Supabase client configuration for EXPENSESINK
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = 'https://xitnatzzojgzmtpagxpe.supabase.co'

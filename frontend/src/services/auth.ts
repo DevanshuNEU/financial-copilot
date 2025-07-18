@@ -1,4 +1,4 @@
-// Authentication service for Financial Copilot
+// Authentication service for EXPENSESINK
 // Handles user authentication, token management, and API communication
 
 import axios from 'axios';

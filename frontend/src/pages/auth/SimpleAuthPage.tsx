@@ -102,7 +102,7 @@ const SimpleAuthPage: React.FC = () => {
             <span className="text-white font-bold text-lg">FC</span>
           </div>
           <h1 className="mt-4 text-3xl font-bold text-gray-900">
-            Financial Copilot
+            EXPENSESINK
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             Smart money management for students

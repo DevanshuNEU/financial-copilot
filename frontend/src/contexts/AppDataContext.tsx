@@ -1,4 +1,4 @@
-// Global App Data Context - Unified state management for Financial Copilot
+// Global App Data Context - Unified state management for EXPENSESINK
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react'
 import { useAuth } from './AuthContext'
 import { useError } from './ErrorContext'

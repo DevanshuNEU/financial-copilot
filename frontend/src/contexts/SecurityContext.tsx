@@ -1,6 +1,6 @@
 /**
  * Security Context and Hooks
- * Centralized security management for Financial Copilot
+ * Centralized security management for EXPENSESINK
  */
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
