@@ -52,7 +52,7 @@ export const GlassmorphismNav: React.FC = () => {
               <span className="text-white font-bold text-sm">$</span>
             </div>
             <span className="text-xl font-semibold text-gray-900">
-              Financial Copilot
+              EXPENSESINK
             </span>
           </div>
 

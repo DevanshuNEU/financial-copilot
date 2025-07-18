@@ -1,4 +1,4 @@
-// Test the complete Financial Copilot local storage integration
+// Test the complete EXPENSESINK local storage integration
 // This tests the full user flow: Auth → Onboarding → Dashboard
 
 import { LocalFinancialService } from '../services/financialService.local';
@@ -22,8 +22,8 @@ const testOnboardingData = {
 };
 
 // Test Suite
-async function testFinancialCopilotLocalIntegration() {
-  console.log('🚀 Starting Financial Copilot Local Integration Test...');
+async function testExpenseSinkLocalIntegration() {
+  console.log('🚀 Starting EXPENSESINK Local Integration Test...');
   
   // Clean slate - clear any existing data
   localStorage.clear();
@@ -118,8 +118,8 @@ async function testFinancialCopilotLocalIntegration() {
     console.error('❌ Test failed:', error);
   }
   
-  console.log('\n🏁 Financial Copilot Local Integration Test Complete!');
+  console.log('\n🏁 EXPENSESINK Local Integration Test Complete!');
 }
 
 // Run the test
-export default testFinancialCopilotLocalIntegration;
+export default testExpenseSinkLocalIntegration;

@@ -1,5 +1,5 @@
 /**
- * Comprehensive Error Boundary Component for Financial Copilot
+ * Comprehensive Error Boundary Component for EXPENSESINK
  * Provides graceful error handling with user-friendly interfaces
  */
 
@@ -163,7 +163,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           </h1>
           
           <p className="text-gray-600 mb-6">
-            Financial Copilot encountered an unexpected error. Don't worry, your data is safe.
+            EXPENSESINK encountered an unexpected error. Don't worry, your data is safe.
           </p>
           
           <div className="space-y-3">

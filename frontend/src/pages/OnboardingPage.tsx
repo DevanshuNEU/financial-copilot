@@ -26,7 +26,7 @@ const OnboardingPage: React.FC = () => {
       console.log('✅ Onboarding data saved successfully');
       
       // Show success message
-      toast.success('Welcome to Financial Copilot! Your personalized dashboard is ready.');
+      toast.success('Welcome to EXPENSESINK! Your personalized dashboard is ready.');
       
       console.log('🎉 Navigating to dashboard...');
       // Navigate to dashboard with celebration

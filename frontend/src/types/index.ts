@@ -2,7 +2,7 @@
  * Main Types Index - Comprehensive Type Definitions
  * 
  * This file provides centralized access to all type definitions
- * used throughout the Financial Copilot application.
+ * used throughout the EXPENSESINK application.
  */
 
 // Legacy types (maintained for backward compatibility)

@@ -1,5 +1,5 @@
 /**
- * Empty State Components for Financial Copilot
+ * Empty State Components for EXPENSESINK
  * Meaningful empty states with actionable guidance
  */
 
@@ -330,7 +330,7 @@ export const OnboardingCompleteState: React.FC<OnboardingCompleteStateProps> = (
     <EmptyState
       icon={<TrendingUp className="w-full h-full text-green-500" />}
       title="You're all set!"
-      description="Your Financial Copilot is ready to help you manage your finances. Let's start by adding your first expense or viewing your dashboard."
+      description="Your EXPENSESINK is ready to help you manage your finances. Let's start by adding your first expense or viewing your dashboard."
       action={{
         label: "Add First Expense",
         onClick: onGetStarted

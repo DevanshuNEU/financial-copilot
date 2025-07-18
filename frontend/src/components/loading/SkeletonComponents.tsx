@@ -1,5 +1,5 @@
 /**
- * Skeleton Loading Components for Financial Copilot
+ * Skeleton Loading Components for EXPENSESINK
  * Content-aware loading placeholders that match the actual UI layout
  */
 

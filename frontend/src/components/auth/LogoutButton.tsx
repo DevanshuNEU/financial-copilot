@@ -1,4 +1,4 @@
-// Logout button component for Financial Copilot
+// Logout button component for EXPENSESINK
 // Handles user logout with confirmation
 
 import React, { useState } from 'react';

@@ -66,7 +66,7 @@ export class DatabaseSwitcher {
         isSupabaseMode: this.isSupabaseMode,
         help: () => {
           console.log(`
-🔧 Financial Copilot Database Switcher
+🔧 EXPENSESINK Database Switcher
 
 Current Mode: ${this.getCurrentMode().toUpperCase()}
 
@@ -83,7 +83,7 @@ Note: Page will reload automatically when switching modes.
       }
       
       console.log(`
-🔧 Financial Copilot Database Switcher loaded!
+🔧 EXPENSESINK Database Switcher loaded!
 Current mode: ${this.getCurrentMode().toUpperCase()}
 Type 'financialCopilotSwitcher.help()' for available commands.
       `)

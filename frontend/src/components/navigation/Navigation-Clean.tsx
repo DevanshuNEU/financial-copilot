@@ -64,7 +64,7 @@ const Navigation: React.FC = () => {
                 <DollarSign className="h-5 w-5 text-white" />
               </div>
               <span className="ml-3 text-xl font-bold text-gray-900">
-                Financial Copilot
+                EXPENSESINK
               </span>
             </div>
           </div>

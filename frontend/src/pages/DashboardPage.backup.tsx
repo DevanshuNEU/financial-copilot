@@ -192,7 +192,7 @@ const DashboardPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome to Financial Copilot, {getFirstName()}!
+              Welcome to EXPENSESINK, {getFirstName()}!
             </h1>
             <p className="text-gray-600">
               Let's start your financial journey by adding your first expense

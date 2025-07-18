@@ -1,5 +1,5 @@
 /**
- * Advanced Loading Components for Financial Copilot
+ * Advanced Loading Components for EXPENSESINK
  * Beautiful, responsive loading indicators with smooth animations
  */
 

@@ -1,5 +1,5 @@
 /**
- * Smart AI Service for Financial Copilot
+ * Smart AI Service for EXPENSESINK
  * 
  * This service uses pure AI intelligence to process expenses naturally.
  * No manual keywords, patterns, or regex - just smart AI conversation!

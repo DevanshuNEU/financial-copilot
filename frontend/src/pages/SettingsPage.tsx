@@ -77,7 +77,7 @@ const SettingsPage: React.FC = () => {
             Settings
           </h1>
           <p className="text-gray-600 text-lg">
-            Manage your Financial Copilot preferences and account settings
+            Manage your EXPENSESINK preferences and account settings
           </p>
         </div>
 
@@ -221,7 +221,7 @@ const SettingsPage: React.FC = () => {
         {/* App Information */}
         <Card className="border-2 border-blue-200 bg-blue-50">
           <CardHeader>
-            <CardTitle className="text-blue-800">About Financial Copilot</CardTitle>
+            <CardTitle className="text-blue-800">About EXPENSESINK</CardTitle>
             <CardDescription className="text-blue-700">
               Smart money management designed specifically for international students
             </CardDescription>

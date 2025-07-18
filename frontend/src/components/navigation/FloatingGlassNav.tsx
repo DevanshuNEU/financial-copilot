@@ -108,13 +108,13 @@ export const FloatingGlassNav: React.FC = () => {
         <button
           onClick={() => handleNavigation('/dashboard')}
           className="flex items-center space-x-3 group"
-          title="Financial Copilot"
+          title="EXPENSESINK"
         >
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-md liquid-transition hover:shadow-lg hover:scale-105">
             <span className="text-white font-bold text-xl group-hover:scale-110 transition-transform">$</span>
           </div>
           <div className="hidden sm:block">
-            <div className="text-lg font-semibold text-gray-900 tracking-tight">Financial Copilot</div>
+            <div className="text-lg font-semibold text-gray-900 tracking-tight">EXPENSESINK</div>
             <div className="text-xs text-emerald-600 font-medium">Smart Finance AI</div>
           </div>
         </button>

@@ -85,9 +85,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, onSkip 
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">FC</span>
+                <span className="text-white font-bold text-sm">ES</span>
               </div>
-              <span className="font-semibold text-gray-900">Financial Copilot</span>
+              <span className="font-semibold text-gray-900">EXPENSESINK</span>
             </div>
             <div className="text-sm text-gray-600">
               Step {currentStep + 1} of {steps.length}

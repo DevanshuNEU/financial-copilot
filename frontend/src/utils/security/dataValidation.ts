@@ -1,6 +1,6 @@
 /**
  * Enhanced Data Validation
- * Comprehensive validation rules for Financial Copilot
+ * Comprehensive validation rules for EXPENSESINK
  */
 
 export interface ValidationResult {
