@@ -1,3 +1,16 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# EXPENSESINK - Financial confidence for every student
+# Optimized for search engine discoverability
+
+# Allow all pages
+Disallow: /admin/
+Disallow: /api/
+Disallow: /*.json$
+
+# Sitemap location
+Sitemap: https://expensesink.com/sitemap.xml
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1

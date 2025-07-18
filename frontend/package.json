@@ -1,7 +1,9 @@
 {
-  "name": "frontend",
+  "name": "expensesink-frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "EXPENSESINK - Financial confidence for every student",
+  "homepage": "https://expensesink.com",
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-progress": "^1.1.7",
