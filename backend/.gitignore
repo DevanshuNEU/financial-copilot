@@ -1,0 +1,6 @@
+# Add .local_docs_backend to .gitignore
+.local_docs_backend/
+*.backup
+baseline_*.json
+test_results.txt
+rollback_test_*
