@@ -1,0 +1,78 @@
+{
+  "expenses": [
+    {
+      "name": "id",
+      "type": "INTEGER",
+      "nullable": false,
+      "primary_key": true
+    },
+    {
+      "name": "amount",
+      "type": "FLOAT",
+      "nullable": false,
+      "primary_key": false
+    },
+    {
+      "name": "category",
+      "type": "VARCHAR(9)",
+      "nullable": false,
+      "primary_key": false
+    },
+    {
+      "name": "description",
+      "type": "TEXT",
+      "nullable": true,
+      "primary_key": false
+    },
+    {
+      "name": "vendor",
+      "type": "VARCHAR(255)",
+      "nullable": true,
+      "primary_key": false
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(8)",
+      "nullable": true,
+      "primary_key": false
+    },
+    {
+      "name": "created_at",
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false
+    }
+  ],
+  "budgets": [
+    {
+      "name": "id",
+      "type": "INTEGER",
+      "nullable": false,
+      "primary_key": true
+    },
+    {
+      "name": "category",
+      "type": "VARCHAR(9)",
+      "nullable": false,
+      "primary_key": false
+    },
+    {
+      "name": "monthly_limit",
+      "type": "FLOAT",
+      "nullable": false,
+      "primary_key": false
+    },
+    {
+      "name": "created_at",
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false
+    },
+    {
+      "name": "updated_at",
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false
+    }
+  ]
+}
