@@ -16,10 +16,17 @@ app = Flask(__name__)
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-    'DATABASE_URL', 
-    'sqlite:///financial_copilot.db'
+    'SUPABASE_DATABASE_URL', 
+    'sqlite:///financial_copilot.db'  # Fallback to SQLite if Supabase not configured
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Add connection pooling for better PostgreSQL performance
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'pool_recycle': 300,
+    'pool_pre_ping': True
+}
 
 # Initialize extensions
 db = SQLAlchemy(app)
