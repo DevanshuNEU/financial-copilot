@@ -2,13 +2,13 @@
 import type { DatabaseConfig } from '../types/services'
 
 export const databaseConfig: DatabaseConfig = {
-  // 🔧 CHANGE THIS TO SWITCH BETWEEN LOCAL AND SUPABASE
-  mode: 'local', // 'local' or 'supabase'
+  // 🔧 FLASK API MODE - Uses Flask backend (which connects to Supabase PostgreSQL)
+  mode: 'supabase', // 'local' = localStorage, 'supabase' = Flask API + Supabase PostgreSQL
   
-  // Supabase configuration (when mode is 'supabase')
+  // Supabase configuration (for auth only when using Flask API mode)
   supabase: {
-    url: 'https://xitnatzzojgzmtpagxpe.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpdG5hdHp6b2pnem10cGFneHBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0MjU5NjUsImV4cCI6MjA2NzAwMTk2NX0.jVVRwpOv3K734lYFgitCQYEReY__EaGo1A5MMVJA9v8'
+    url: process.env.REACT_APP_SUPABASE_URL || '',
+    anonKey: process.env.REACT_APP_SUPABASE_ANON_KEY || ''
   }
 }
 
