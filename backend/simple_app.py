@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, Enum as SQLEnum
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -52,20 +52,20 @@ class Expense(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
-    category = db.Column(db.Enum(ExpenseCategory), nullable=False)
+    category = db.Column(db.String, nullable=False)  # Use string temporarily to fix enum issue
     description = db.Column(db.Text)
     vendor = db.Column(db.String(255))
-    status = db.Column(db.Enum(ExpenseStatus), default=ExpenseStatus.PENDING)
+    status = db.Column(db.String, default='pending')  # Use string temporarily
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
         return {
             'id': self.id,
             'amount': self.amount,
-            'category': self.category.value,
+            'category': self.category,  # Return string directly
             'description': self.description,
             'vendor': self.vendor,
-            'status': self.status.value,
+            'status': self.status,  # Return string directly
             'created_at': self.created_at.isoformat()
         }
 
@@ -73,7 +73,7 @@ class Budget(db.Model):
     __tablename__ = 'budgets'
     
     id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.Enum(ExpenseCategory), nullable=False, unique=True)
+    category = db.Column(db.String, nullable=False, unique=True)  # Use string temporarily
     monthly_limit = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -81,7 +81,7 @@ class Budget(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'category': self.category.value,
+            'category': self.category,  # Return string directly
             'monthly_limit': self.monthly_limit,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
@@ -189,7 +189,7 @@ def get_dashboard_overview():
         for cat, total, count in category_data:
             budget_limit = budgets.get(cat, 0)
             enhanced_categories.append({
-                'category': cat.value,
+                'category': cat,  # Remove .value since it's already a string
                 'total': float(total),
                 'count': count,
                 'budget': budget_limit,
@@ -363,7 +363,7 @@ def get_safe_to_spend():
             over_budget = max(0, spent - limit)
             
             budget_status.append({
-                'category': category.value,
+                'category': category,  # Remove .value since it's already a string
                 'limit': limit,
                 'spent': spent,
                 'remaining': max(0, remaining),
@@ -451,5 +451,12 @@ def init_and_seed():
             print("Total monthly budget: $1,030 (typical international student budget)")
 
 if __name__ == '__main__':
-    init_and_seed()
+    # Initialize database (no seeding needed - data already migrated from Supabase)
+    with app.app_context():
+        # Don't create tables - they already exist in Supabase
+        # Don't seed data - we already have migrated data
+        print("🎉 Connected to Supabase PostgreSQL successfully!")
+        print(f"📊 Current expense count: {Expense.query.count()}")
+        print(f"💰 Total expenses: ${sum([e.amount for e in Expense.query.all()]):.2f}")
+    
     app.run(debug=True, host='0.0.0.0', port=5002)
