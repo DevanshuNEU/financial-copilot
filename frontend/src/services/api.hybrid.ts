@@ -74,6 +74,9 @@ class HybridApiService {
       /^\/api\/health$/,           // Health check
       /^\/api\/onboarding$/,       // GET/POST onboarding data
       /^\/api\/dashboard$/,        // GET comprehensive dashboard data
+      /^\/api\/analytics$/,        // GET analytics data
+      /^\/api\/budgets\/?$/,       // GET/POST/DELETE budgets
+      /^\/api\/safe-to-spend$/,    // GET safe-to-spend calculations
     ];
     
     return simplePatterns.some(pattern => pattern.test(endpoint));
@@ -110,6 +113,18 @@ class HybridApiService {
       
       if (endpoint === '/api/dashboard') {
         return this.fetchEdgeFunction('dashboard-api', options);
+      }
+      
+      if (endpoint === '/api/analytics') {
+        return this.fetchEdgeFunction('analytics-api', options);
+      }
+      
+      if (endpoint === '/api/budgets' || endpoint === '/api/budgets/') {
+        return this.fetchEdgeFunction('budget-api', options);
+      }
+      
+      if (endpoint === '/api/safe-to-spend') {
+        return this.fetchEdgeFunction('safe-to-spend-api', options);
       }
       
       // Single expense GET - pass the ID as a query parameter
@@ -175,21 +190,25 @@ class HybridApiService {
     return this.routeRequest('/api/dashboard');
   }
 
-  // Budget Management - complex business logic, always Flask
+  // Budget Management - now routed to Edge Functions
   async getBudgets(): Promise<{ budgets: Budget[] }> {
-    return this.fetchFlaskApi('/api/budgets');
+    const response = await this.routeRequest('/api/budgets');
+    // Transform response to match expected format
+    return {
+      budgets: response.budgets || []
+    };
   }
 
   async createOrUpdateBudget(category: string, monthly_limit: number): Promise<Budget> {
-    return this.fetchFlaskApi('/api/budgets', {
+    return this.routeRequest('/api/budgets', {
       method: 'POST',
       body: JSON.stringify({ category, monthly_limit }),
     });
   }
 
-  // Safe to Spend - complex calculations, always Flask
+  // Safe to Spend - now routed to Edge Functions
   async getSafeToSpend(): Promise<SafeToSpendResponse> {
-    return this.fetchFlaskApi('/api/safe-to-spend');
+    return this.routeRequest('/api/safe-to-spend');
   }
 
   // Weekly Comparison Data - complex analytics, always Flask
