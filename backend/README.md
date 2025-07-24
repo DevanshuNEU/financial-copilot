@@ -1,77 +1,68 @@
-# EXPENSESINK Backend - Supabase Migration
+# EXPENSESINK Backend
 
-## Production Setup
+## Architecture
 
-This backend has been migrated from SQLite to Supabase PostgreSQL for improved performance, scalability, and reliability.
+EXPENSESINK uses a **pure Supabase architecture**:
+- **Database**: Supabase PostgreSQL
+- **API**: Supabase Edge Functions (Deno runtime)
+- **Authentication**: Supabase Auth
+- **Real-time**: Supabase Realtime subscriptions
 
-### Quick Start
+## Directory Structure
 
-1. **Clone and setup environment:**
-   ```bash
-   git clone <repository>
-   cd backend
-   cp .env.example .env
-   # Edit .env with your Supabase credentials
-   ```
+```
+backend/
+├── legacy_flask/        # Legacy Flask API (reference only)
+├── scripts/             # Utility scripts
+│   └── test_supabase_connection.py
+├── .env                 # Environment variables
+├── .env.example         # Environment template
+└── README.md           # This file
+```
 
-2. **Install dependencies:**
-   ```bash
-   python setup_environment.py
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
+## Edge Functions
 
-3. **Run the application:**
-   ```bash
-   python simple_app.py
-   ```
+All API logic is now in Supabase Edge Functions located at:
+```
+/supabase/functions/
+├── analytics-api/      # Analytics calculations
+├── budget-api/         # Budget management
+├── dashboard-api/      # Dashboard metrics
+├── expenses-create/    # Create expense
+├── expenses-delete/    # Delete expense
+├── expenses-get/       # Get single expense
+├── expenses-list/      # List expenses
+├── expenses-update/    # Update expense
+├── health-check/       # API health check
+├── onboarding-simple/  # User onboarding
+├── safe-to-spend-api/  # Safe to spend calculations
+└── weekly-comparison/  # Weekly spending analytics
+```
 
-### Supabase Configuration
+## Environment Variables
 
-Get your Supabase credentials from [supabase.com](https://supabase.com):
+Required in `.env`:
+```
+SUPABASE_URL=your_project_url
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_key
+```
 
-- **Project URL**: `https://your-project-ref.supabase.co`
-- **Anon Key**: From Project Settings → API
-- **Service Role Key**: From Project Settings → API  
-- **Database URL**: Use Session Pooler connection string
+## Testing Connection
 
-### Database Migration
+```bash
+cd scripts
+python test_supabase_connection.py
+```
 
-If migrating from SQLite:
+## Deployment
 
-1. **Apply database schema:**
-   ```sql
-   -- Run supabase_migration.sql in Supabase SQL Editor
-   ```
+Edge Functions are deployed via the Supabase CLI:
+```bash
+cd /path/to/project
+./deploy_edge_functions.sh
+```
 
-2. **Verify migration:**
-   ```bash
-   python verify_migration.py
-   ```
+## Legacy Code
 
-### Performance
-
-- **Session Pooler**: IPv4/IPv6 compatible connection pooling
-- **Connection Pool**: 10 connections, 300s recycle time
-- **Performance Gain**: 60-75% faster queries than SQLite
-
-### API Endpoints
-
-All endpoints remain identical to SQLite version:
-
-- `GET /` - Health check
-- `GET /api/expenses` - List expenses  
-- `GET /api/dashboard/overview` - Dashboard data
-- `GET /api/dashboard/weekly-comparison` - Weekly analytics
-- `GET /api/safe-to-spend` - Budget recommendations
-
-### Production Deployment
-
-- Uses Supabase PostgreSQL (managed database)
-- Session Pooler for optimal performance
-- Environment variables for configuration
-- Docker support via Dockerfile
-
----
-
-**EXPENSESINK** - Tesla/Apple quality student financial management platform.
+The `legacy_flask/` directory contains the original Flask API implementation for reference only. This code is no longer used in production.

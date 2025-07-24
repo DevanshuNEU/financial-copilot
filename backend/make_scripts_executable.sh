@@ -1,1 +1,0 @@
-chmod +x .local_docs_backend/*.sh
