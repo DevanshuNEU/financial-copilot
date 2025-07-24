@@ -5,46 +5,38 @@ import { apiService } from './api'
 
 export class ApiFinancialService implements IFinancialService {
   /**
-   * Save onboarding data via Flask API
+   * Save onboarding data via hybrid API (Edge Functions)
    */
   async saveOnboardingData(data: OnboardingData): Promise<void> {
-    console.log('🚀 Flask API: Starting saveOnboardingData with:', data)
+    console.log('🚀 Hybrid API: Starting saveOnboardingData with:', data)
     
     try {
-      // For now, we'll store onboarding data in localStorage 
-      // and use Flask API for expenses/budgets
-      // TODO: Add Flask API endpoint for onboarding data
-      localStorage.setItem('onboarding_data', JSON.stringify({
-        ...data,
-        completed_at: new Date().toISOString()
-      }))
-      
-      console.log('✅ Flask API: Onboarding data saved to localStorage')
+      await apiService.saveOnboardingData(data)
+      console.log('✅ Hybrid API: Onboarding data saved to Supabase via Edge Functions')
     } catch (error) {
-      console.error('❌ Flask API: Save error:', error)
+      console.error('❌ Hybrid API: Save error:', error)
       throw new Error(`Failed to save onboarding data: ${error}`)
     }
   }
 
   /**
-   * Load onboarding data
+   * Load onboarding data via hybrid API (Edge Functions)
    */
   async loadOnboardingData(): Promise<OnboardingData | null> {
-    console.log('📖 Flask API: Loading onboarding data')
+    console.log('📖 Hybrid API: Loading onboarding data via Edge Functions')
     
     try {
-      const stored = localStorage.getItem('onboarding_data')
+      const data = await apiService.getOnboardingData()
       
-      if (!stored) {
-        console.log('📭 Flask API: No onboarding data found')
+      if (!data) {
+        console.log('📭 Hybrid API: No onboarding data found')
         return null
       }
 
-      const data = JSON.parse(stored)
-      console.log('✅ Flask API: Onboarding data loaded:', data)
+      console.log('✅ Hybrid API: Onboarding data loaded:', data)
       return data
     } catch (error) {
-      console.error('❌ Flask API: Load error:', error)
+      console.error('❌ Hybrid API: Load error:', error)
       return null
     }
   }

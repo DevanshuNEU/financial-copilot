@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { useAuth } from './AuthContext'
 import { useError } from './ErrorContext'
 import { financialService } from '../services/financialService'
+import { apiService } from '../services/api'  // Import our hybrid API service
 import { toast } from 'react-hot-toast'
 import type { OnboardingData, PersonalizedSafeToSpend } from '../types/services'
 
@@ -122,15 +123,54 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, authUser])
 
-  const loadUserExpenses = useCallback((): UserExpense[] => {
+  const loadUserExpenses = useCallback(async (): Promise<UserExpense[]> => {
     try {
-      const stored = localStorage.getItem(`financial_copilot_expenses_${authUser?.id}`)
-      if (!stored) return []
+      console.log('🔥 AppDataContext: Loading expenses from API...')
+      
+      // Use our API service directly (will route to Edge Functions or Flask based on config)
+      const response = await apiService.getExpenses()
+      console.log('✅ AppDataContext: API response received:', response)
+      
+      // Handle different response formats
+      let expenses: any[] = []
+      if (Array.isArray(response)) {
+        expenses = response
+      } else if (response.expenses && Array.isArray(response.expenses)) {
+        expenses = response.expenses
+      } else {
+        console.warn('⚠️ AppDataContext: Unexpected API response format:', response)
+        expenses = []
+      }
 
-      const expenses = JSON.parse(stored)
-      return Array.isArray(expenses) ? expenses : []
+      // Convert API expenses to UserExpense format
+      const userExpenses: UserExpense[] = expenses.map((expense: any) => ({
+        id: expense.id?.toString() || String(Math.random()),
+        amount: parseFloat(expense.amount) || 0,
+        description: expense.description || 'No description',
+        category: expense.category || 'other',
+        vendor: expense.vendor || '',
+        date: expense.created_at ? new Date(expense.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        status: expense.status || 'pending',
+        createdAt: expense.created_at || new Date().toISOString()
+      }))
+
+      console.log('✅ AppDataContext: Converted user expenses:', userExpenses.length, userExpenses)
+      return userExpenses
     } catch (error) {
-      console.error('Failed to load expenses:', error)
+      console.error('❌ AppDataContext: Failed to load expenses from API:', error)
+      
+      // Fallback to localStorage if API fails
+      try {
+        const stored = localStorage.getItem(`financial_copilot_expenses_${authUser?.id}`)
+        if (stored) {
+          const expenses = JSON.parse(stored)
+          console.log('📦 AppDataContext: Fallback to localStorage expenses:', expenses)
+          return Array.isArray(expenses) ? expenses : []
+        }
+      } catch (storageError) {
+        console.error('❌ AppDataContext: Fallback localStorage also failed:', storageError)
+      }
+      
       return []
     }
   }, [authUser?.id])
@@ -141,69 +181,55 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     setAppData(prev => ({ ...prev, loading: true, error: null }))
 
     try {
-      // Load onboarding data with error handling
-      const onboarding = await financialService.loadOnboardingData()
+      console.log('🚀 AppDataContext: Loading comprehensive dashboard data from Edge Functions')
       
-      if (!onboarding) {
-        const error = new Error('No onboarding data found')
-        handleNetworkError(error, { 
-          component: 'AppDataContext',
-          action: 'loadOnboardingData',
-          userId: authUser.id 
-        })
-        
-        setAppData(prev => ({
-          ...prev,
-          loading: false,
-          error: 'No onboarding data found'
-        }))
-        return
-      }
-
-      // Calculate safe to spend data - with actual expenses considered
-      const baseSafeToSpend = financialService.calculatePersonalizedSafeToSpend(onboarding)
-
-      // Load expenses (from localStorage for now)
-      const userExpenses = loadUserExpenses()
-
-      // Add fixed costs as system expenses
-      const fixedCostExpenses: UserExpense[] = onboarding.fixedCosts.map(cost => ({
-        id: `fixed_cost_${cost.name.toLowerCase().replace(/\s+/g, '_')}`,
-        amount: cost.amount,
-        description: cost.name,
-        category: 'Fixed Costs',
-        vendor: 'Monthly Fixed Cost',
-        date: new Date().toISOString().split('T')[0], // Today's date
-        status: 'approved' as const,
-        createdAt: new Date().toISOString()
+      // PROPER ARCHITECTURE: Single API call for all dashboard data
+      // All calculations happen server-side with proper business logic
+      const dashboardData = await apiService.getDashboardData()
+      
+      console.log('✅ AppDataContext: Dashboard API response:', dashboardData)
+      
+      // Extract data from comprehensive API response
+      const allExpenses = dashboardData.recentActivity || []
+      
+      // Convert API response to proper UserExpense format
+      const userExpenses: UserExpense[] = allExpenses.map((expense: any) => ({
+        id: String(expense.id), // Ensure ID is string
+        amount: expense.amount,
+        description: expense.description,
+        category: expense.category,
+        vendor: expense.vendor || '',
+        date: expense.date ? new Date(expense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        status: expense.status || 'pending',
+        createdAt: expense.date || new Date().toISOString()
       }))
-
-      // Combine user expenses with fixed cost expenses
-      const allExpenses = [...userExpenses, ...fixedCostExpenses]
-
-      // Calculate total spending (only from user expenses, not fixed costs)
-      const totalSpent = userExpenses.reduce((sum, expense) => sum + expense.amount, 0)
-
-      // Update safe to spend data with actual expenses
-      const safeToSpend = {
-        ...baseSafeToSpend,
-        totalSpent,
-        availableAmount: Math.max(0, baseSafeToSpend.availableForSpending - totalSpent),
-        dailySpendingGuide: Math.max(0, (baseSafeToSpend.availableForSpending - totalSpent) / baseSafeToSpend.daysLeftInMonth)
+      
+      const totalSpent = dashboardData.totalUserExpenses || 0
+      
+      // Create proper safe-to-spend data structure from server calculations
+      const safeToSpend: ExtendedSafeToSpendData = {
+        totalBudget: dashboardData.totalBudget,
+        totalFixedCosts: dashboardData.totalFixedCosts,
+        availableForSpending: dashboardData.availableAmount,
+        availableAmount: dashboardData.availableAmount,
+        dailySafeAmount: dashboardData.dailySafeAmount,
+        currency: dashboardData.currency,
+        daysLeftInMonth: dashboardData.daysLeftInMonth,
+        isPersonalized: true,
+        // Missing properties required by ExtendedSafeToSpendData interface
+        totalSpent: dashboardData.totalSpent,
+        dailySpendingGuide: dashboardData.dailySafeAmount // Same as dailySafeAmount
       }
-
-      // Calculate budget categories from onboarding data (use user expenses only)
-      const budgetCategories = calculateBudgetCategories(onboarding, userExpenses)
-
-      // Create user profile
+      
+      // Create user profile from server data
       const userProfile: UserProfile = {
         id: authUser.id,
         email: authUser.email,
         firstName: authUser.firstName,
         lastName: authUser.lastName,
-        studentType: 'international', // Default, should be customizable
+        studentType: 'international',
         preferences: {
-          currency: onboarding.currency,
+          currency: dashboardData.currency,
           notifications: {
             budgetWarnings: true,
             dailySummaries: false,
@@ -212,12 +238,15 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         }
       }
 
+      // Create budget categories (simplified for now)
+      const budgetCategories: UserBudgetCategory[] = []
+
       setAppData(prev => ({
         ...prev,
         user: userProfile,
-        onboardingData: onboarding,
+        onboardingData: dashboardData.userProfile,
         safeToSpendData: safeToSpend,
-        expenses: allExpenses, // Show both user expenses and fixed costs
+        expenses: userExpenses,
         budgetCategories,
         totalSpent,
         loading: false,
@@ -225,36 +254,16 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         lastSyncAt: new Date().toISOString()
       }))
 
-      console.log('✅ AppData: Successfully loaded user data')
+      console.log('✅ AppDataContext: Successfully loaded data from comprehensive Dashboard API')
 
     } catch (error) {
-      console.error('❌ AppData: Failed to load user data:', error)
+      console.error('❌ AppDataContext: Failed to load dashboard data:', error)
       
-      // Use enhanced error handling
       if (error instanceof Error) {
         handleNetworkError(error, { 
           component: 'AppDataContext',
           action: 'refreshAppData',
           userId: authUser?.id 
-        })
-        
-        // Schedule retry for critical data loading
-        scheduleRetry(
-          `refresh_app_data_${authUser?.id}`,
-          refreshAppData,
-          3
-        )
-      } else {
-        addError({
-          type: 'unknown',
-          message: 'Failed to load user data',
-          resolved: false,
-          retryable: true,
-          context: { 
-            component: 'AppDataContext',
-            action: 'refreshAppData',
-            userId: authUser?.id 
-          }
         })
       }
       
@@ -264,7 +273,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         error: error instanceof Error ? error.message : 'Failed to load data'
       }))
     }
-  }, [authUser, loadUserExpenses, handleNetworkError, addError, scheduleRetry])
+  }, [authUser, handleNetworkError])
 
   const saveUserExpenses = useCallback((expenses: UserExpense[]): void => {
     try {
@@ -315,7 +324,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
       }
 
       // Only save user expenses, not fixed costs
-      const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+      const userExpenses = appData.expenses.filter(expense => !String(expense.id).startsWith('fixed_cost_'))
       const updatedUserExpenses = [...userExpenses, newExpense]
       saveUserExpenses(updatedUserExpenses)
 
@@ -340,8 +349,8 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
 
   const updateExpense = useCallback(async (id: string, updates: Partial<UserExpense>): Promise<void> => {
     try {
-      // Only update user expenses, not fixed costs
-      if (id.startsWith('fixed_cost_')) {
+      // Only save user expenses, not fixed costs
+      if (String(id).startsWith('fixed_cost_')) {
         const error = new Error('Cannot update fixed cost expenses')
         addError({
           type: 'validation',
@@ -353,7 +362,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         throw error
       }
 
-      const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+      const userExpenses = appData.expenses.filter(expense => !String(expense.id).startsWith('fixed_cost_'))
       const updatedUserExpenses = userExpenses.map(expense =>
         expense.id === id ? { ...expense, ...updates } : expense
       )
@@ -380,7 +389,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
   const deleteExpense = useCallback(async (id: string): Promise<void> => {
     try {
       // Only delete user expenses, not fixed costs
-      if (id.startsWith('fixed_cost_')) {
+      if (String(id).startsWith('fixed_cost_')) {
         const error = new Error('Cannot delete fixed cost expenses')
         addError({
           type: 'validation',
@@ -392,7 +401,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         throw error
       }
 
-      const userExpenses = appData.expenses.filter(expense => !expense.id.startsWith('fixed_cost_'))
+      const userExpenses = appData.expenses.filter(expense => !String(expense.id).startsWith('fixed_cost_'))
       const updatedUserExpenses = userExpenses.filter(expense => expense.id !== id)
       saveUserExpenses(updatedUserExpenses)
       await refreshAppData()

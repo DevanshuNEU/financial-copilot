@@ -69,7 +69,7 @@ class HybridApiService {
     if (!USE_EDGE_FUNCTIONS) return false;
     
     const simplePatterns = [
-      /^\/api\/expenses\/\d+$/,    // GET single expense
+      /^\/api\/expenses\/\d+$/,    // GET single expense or PUT/DELETE expense by ID
       /^\/api\/expenses\/?$/,      // GET list or POST create  
       /^\/api\/health$/,           // Health check
       /^\/api\/onboarding$/,       // GET/POST onboarding data
@@ -77,6 +77,7 @@ class HybridApiService {
       /^\/api\/analytics$/,        // GET analytics data
       /^\/api\/budgets\/?$/,       // GET/POST/DELETE budgets
       /^\/api\/safe-to-spend$/,    // GET safe-to-spend calculations
+      /^\/api\/dashboard\/weekly-comparison$/, // GET weekly comparison
     ];
     
     return simplePatterns.some(pattern => pattern.test(endpoint));
@@ -127,11 +128,22 @@ class HybridApiService {
         return this.fetchEdgeFunction('safe-to-spend-api', options);
       }
       
-      // Single expense GET - pass the ID as a query parameter
+      // Single expense operations - GET, PUT, DELETE by ID
       const singleExpenseMatch = endpoint.match(/^\/api\/expenses\/(\d+)$/);
-      if (singleExpenseMatch && (!options?.method || options.method === 'GET')) {
-        // Pass ID as query parameter to the Edge Function
-        return this.fetchEdgeFunction(`expenses-get?id=${singleExpenseMatch[1]}`, options);
+      if (singleExpenseMatch) {
+        const expenseId = singleExpenseMatch[1];
+        if (!options?.method || options.method === 'GET') {
+          return this.fetchEdgeFunction(`expenses-get?id=${expenseId}`, options);
+        } else if (options.method === 'PUT') {
+          return this.fetchEdgeFunction(`expenses-update?id=${expenseId}`, options);
+        } else if (options.method === 'DELETE') {
+          return this.fetchEdgeFunction(`expenses-delete?id=${expenseId}`, options);
+        }
+      }
+      
+      // Weekly comparison endpoint
+      if (endpoint === '/api/dashboard/weekly-comparison') {
+        return this.fetchEdgeFunction('weekly-comparison', options);
       }
     }
     
@@ -170,17 +182,17 @@ class HybridApiService {
     });
   }
 
-  // Update existing expense - complex operation, always use Flask
+  // Update existing expense - now routed to Edge Functions
   async updateExpense(id: number, expense: Partial<Omit<Expense, 'id' | 'created_at'>>): Promise<Expense> {
-    return this.fetchFlaskApi(`/api/expenses/${id}`, {
+    return this.routeRequest<Expense>(`/api/expenses/${id}`, {
       method: 'PUT',
       body: JSON.stringify(expense),
     });
   }
 
-  // Delete expense - complex operation, always use Flask
+  // Delete expense - now routed to Edge Functions
   async deleteExpense(id: number): Promise<{ message: string }> {
-    return this.fetchFlaskApi(`/api/expenses/${id}`, {
+    return this.routeRequest<{ message: string }>(`/api/expenses/${id}`, {
       method: 'DELETE',
     });
   }
@@ -192,7 +204,7 @@ class HybridApiService {
 
   // Budget Management - now routed to Edge Functions
   async getBudgets(): Promise<{ budgets: Budget[] }> {
-    const response = await this.routeRequest('/api/budgets');
+    const response = await this.routeRequest<{ budgets: any[] }>('/api/budgets');
     // Transform response to match expected format
     return {
       budgets: response.budgets || []
@@ -211,7 +223,7 @@ class HybridApiService {
     return this.routeRequest('/api/safe-to-spend');
   }
 
-  // Weekly Comparison Data - complex analytics, always Flask
+  // Weekly Comparison Data - now routed to Edge Functions
   async getWeeklyComparison(): Promise<{
     weeklyData: Array<{
       day: string;
@@ -223,7 +235,17 @@ class HybridApiService {
     lastWeekTotal: number;
     currentDayOfWeek: number;
   }> {
-    return this.fetchFlaskApi('/api/dashboard/weekly-comparison');
+    return this.routeRequest<{
+      weeklyData: Array<{
+        day: string;
+        dayName: string;
+        thisWeek: number;
+        lastWeek: number;
+      }>;
+      thisWeekTotal: number;
+      lastWeekTotal: number;
+      currentDayOfWeek: number;
+    }>('/api/dashboard/weekly-comparison');
   }
 }
 

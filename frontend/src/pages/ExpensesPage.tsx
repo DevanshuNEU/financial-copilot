@@ -359,7 +359,7 @@ const ExpensesPage: React.FC = () => {
                         
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity duration-200">
-                          {expense.id.startsWith('fixed_cost_') ? (
+                          {String(expense.id).startsWith('fixed_cost_') ? (
                             // Fixed cost expenses - show as system expenses
                             <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-lg border">
                               Monthly Fixed Cost
