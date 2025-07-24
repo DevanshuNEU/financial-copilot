@@ -1,0 +1,18 @@
+# Supabase
+.branches
+.temp
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
