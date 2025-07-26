@@ -1,4 +1,4 @@
-# EXPENSESINK
+# ExpenseSink
 
 A modern, AI-powered expense tracking application built with React and Supabase Edge Functions.
 
