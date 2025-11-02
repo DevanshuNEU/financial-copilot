@@ -12,7 +12,7 @@ export interface Expense {
   category: string;
   description: string;
   vendor: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';  // ✅ All valid statuses
   created_at: string;
 }
 
@@ -65,8 +65,30 @@ export interface CategoryBreakdown {
 }
 
 export interface DashboardData {
-  overview: DashboardOverview;
-  category_breakdown: CategoryBreakdown[];
+  summary: {
+    totalSpent: number;
+    totalBudget: number;
+    totalFixedCosts: number;
+    discretionaryBudget: number;
+    availableAmount: number;
+    dailySafeAmount: number;
+    daysRemaining: number;
+    spendingTrend: number;
+  };
+  spendingByCategory: Record<string, number>;
+  budgetHealth: Record<string, any>;
+  recentExpenses: Expense[];
+  insights: Array<{
+    type: string;
+    message: string;
+  }>;
+  stats: {
+    totalTransactions: number;
+    averageTransaction: number;
+    last7DaysSpending?: number;
+    previous7DaysSpending?: number;
+  };
+  timestamp?: string;
 }
 
 export interface WeeklyData {
