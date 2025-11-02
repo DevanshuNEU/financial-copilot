@@ -33,8 +33,8 @@ export const AIChat: React.FC<AIChatProps> = ({
   onExpenseProcessed,
   className = ''
 }) => {
-  // Get app data context
-  const { addExpense } = useAppData();
+  // ✅ Get app data context including budget info
+  const { addExpense, appData } = useAppData();
   
   // Chat state management
   const {
@@ -57,12 +57,13 @@ export const AIChat: React.FC<AIChatProps> = ({
     setSuggestions
   );
   
-  // Message processing
+  // ✅ Message processing with budget context
   const { processMessage } = useChatProcessing(
     addMessage,
     updateConversationContext,
     onExpenseProcessed,
-    addExpense
+    addExpense,
+    appData  // ✅ Pass budget context to AI!
   );
   
   // Input handlers

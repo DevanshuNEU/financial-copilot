@@ -88,7 +88,8 @@ export const useChatProcessing = (
   addMessage: (message: AIChatMessage) => void,
   updateConversationContext: (context: ConversationContext | null) => void,
   onExpenseProcessed?: (expense: any) => void,
-  addExpense?: (expense: any) => Promise<void>
+  addExpense?: (expense: any) => Promise<void>,
+  appData?: any  // ✅ NEW: Budget context from AppDataContext
 ) => {
   const processMessage = useCallback(async (
     userContent: string,
@@ -104,10 +105,24 @@ export const useChatProcessing = (
     addMessage(userMessage);
     
     try {
-      // Process with AI
+      // ✅ Build budget context for AI
+      const budgetContext: ConversationContext = conversationContext ? { ...conversationContext } : {};
+      
+      if (appData?.safeToSpendData) {
+        budgetContext.userBudget = {
+          totalBudget: appData.safeToSpendData.totalBudget,
+          fixedCosts: appData.safeToSpendData.totalFixedCosts,
+          discretionaryBudget: appData.safeToSpendData.availableForSpending,
+          spent: appData.totalSpent || 0,
+          available: appData.safeToSpendData.availableAmount,
+          dailySafe: appData.safeToSpendData.dailySafeAmount
+        };
+      }
+      
+      // Process with AI (now budget-aware!)
       const result: SmartAIResponse = conversationContext 
-        ? await aiService.handleFollowUp(userContent, conversationContext)
-        : await aiService.processExpenseConversation(userContent);
+        ? await aiService.handleFollowUp(userContent, budgetContext)
+        : await aiService.processExpenseConversation(userContent, budgetContext);
       
       let assistantMessage: AIChatMessage;
       
@@ -120,7 +135,7 @@ export const useChatProcessing = (
             category: result.expense.category!,
             vendor: result.expense.vendor || 'Unknown',
             date: result.expense.date || new Date().toISOString().split('T')[0],
-            status: 'approved' as const
+            status: 'completed' as const  // ✅ Fixed: Use 'completed' instead of 'approved'
           });
           
           const description = result.expense.description || 'expense';
@@ -132,10 +147,17 @@ export const useChatProcessing = (
             `Nice! Added that expense. What else can I help with?`
           ];
           
+          let successMessage = successMessages[Math.floor(Math.random() * successMessages.length)];
+          
+          // ✅ Add budget insight if AI provided one
+          if (result.insight) {
+            successMessage += `\n\n💡 ${result.insight}`;
+          }
+          
           assistantMessage = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
-            content: successMessages[Math.floor(Math.random() * successMessages.length)],
+            content: successMessage,
             timestamp: new Date(),
             metadata: {
               expenseProcessed: true,
@@ -238,7 +260,7 @@ export const useChatProcessing = (
       
       addMessage(errorMessage);
     }
-  }, [addMessage, updateConversationContext, onExpenseProcessed, addExpense]);
+  }, [addMessage, updateConversationContext, onExpenseProcessed, addExpense, appData]);
   
   return { processMessage };
 };
