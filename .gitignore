@@ -46,6 +46,13 @@ coverage/
 # Local documentation
 .local-docs/
 .local_docs_backend/
+LOCAL_TESTING.md
+SETUP.md
+QUICK_MIGRATION.sql
+IMPROVEMENT_NOTES.md
+TEMP_FIX_CATEGORIES.txt
+**/CLEANUP_SUMMARY.md
+**/CLEANUP_INSTRUCTIONS.md
 
 # Supabase
 .branches
