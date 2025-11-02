@@ -1,5 +1,5 @@
 // Main Auth Context - Properly handles switching without hook violations
-import React, { ReactNode } from 'react'
+import React, { ReactNode, createContext, useContext } from 'react'
 import { databaseConfig } from '../config/database'
 import { LocalAuthProvider, useLocalAuth } from './authContext.local'
 import { SupabaseAuthProvider, useSupabaseAuth } from './authContext.supabase'
@@ -9,34 +9,49 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
+// Create a unified context
+const AuthContext = createContext<IAuthService | null>(null)
+
+// Wrapper providers that inject the correct implementation
+const LocalWrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const auth = useLocalAuth()
+  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>
+}
+
+const SupabaseWrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const auth = useSupabaseAuth()
+  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>
+}
+
 // Main Auth Provider - switches based on config
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   if (databaseConfig.mode === 'local') {
     console.log('🔐 Using LOCAL authentication')
-    return <LocalAuthProvider>{children}</LocalAuthProvider>
+    return (
+      <LocalAuthProvider>
+        <LocalWrapper>{children}</LocalWrapper>
+      </LocalAuthProvider>
+    )
   } else {
     console.log('🔐 Using SUPABASE authentication')
-    return <SupabaseAuthProvider>{children}</SupabaseAuthProvider>
+    return (
+      <SupabaseAuthProvider>
+        <SupabaseWrapper>{children}</SupabaseWrapper>
+      </SupabaseAuthProvider>
+    )
   }
 }
 
-// Create a unified auth hook that works with both providers
-// This will be called from within the appropriate provider context
-// eslint-disable-next-line react-hooks/rules-of-hooks
+// ✅ FIXED: Single hook that works regardless of provider
 export const useAuth = (): IAuthService => {
-  // Since the provider is chosen at the top level, we can safely call the appropriate hook
-  if (databaseConfig.mode === 'local') {
-    // This will only be called when LocalAuthProvider is active
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useLocalAuth()
-  } else {
-    // This will only be called when SupabaseAuthProvider is active
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useSupabaseAuth()
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider')
   }
+  return context
 }
 
-// Export individual hooks for direct access if needed
+// Export individual hooks for direct access if needed (rare)
 export { useLocalAuth, useSupabaseAuth }
 
 // Export auth types for TypeScript
