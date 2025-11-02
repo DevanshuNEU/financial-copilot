@@ -7,47 +7,63 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Only allow POST method
     if (req.method !== 'POST') {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 405 }
-      )
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    // Parse request body
-    const body = await req.json()
-    const { amount, category, vendor, description, status = 'pending' } = body
-
-    // Validate required fields
-    if (!amount || !category || !vendor) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: amount, category, vendor' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Insert new expense
+    // Get auth
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No auth' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user } } = await supabase.auth.getUser(token)
+    
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    const body = await req.json()
+
+    // Validate - vendor is optional
+    if (!body.amount || !body.category) {
+      return new Response(JSON.stringify({ 
+        error: 'Missing required fields: amount and category are required' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Insert expense
     const { data: expense, error } = await supabase
       .from('expenses')
       .insert([{
-        amount: parseFloat(amount),
-        category,
-        vendor,
-        description: description || '',
-        status,
-        created_at: new Date().toISOString()
+        user_id: user.id,
+        amount: parseFloat(body.amount),
+        category: body.category,
+        vendor: body.vendor || 'Unknown',  // ✅ Default to 'Unknown' if null
+        description: body.description || '',
+        status: body.status || 'pending'
       }])
       .select()
       .single()
@@ -56,33 +72,16 @@ serve(async (req) => {
       throw error
     }
 
-    // Return created expense
-    const response = {
-      id: expense.id,
-      amount: parseFloat(expense.amount),
-      category: expense.category,
-      vendor: expense.vendor,
-      description: expense.description,
-      status: expense.status,
-      created_at: expense.created_at
-    }
-
-    return new Response(
-      JSON.stringify(response),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 201,
-      },
-    )
+    return new Response(JSON.stringify(expense), {
+      status: 201,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
 
   } catch (error) {
-    console.error('Error in expenses-create:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      },
-    )
+    console.error('Error:', error)
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 })

@@ -1,121 +1,55 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
-}
+import { authenticateUser, createAuthenticatedClient } from '../_shared/auth.ts'
+import { errorResponse, successResponse, validationError, corsHeaders } from '../_shared/errors.ts'
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Only allow DELETE method
+    // Only allow DELETE
     if (req.method !== 'DELETE') {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed. Use DELETE to remove expenses.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 405 }
-      )
+      return errorResponse(new Error('Method not allowed'), 'expenses-delete')
     }
 
-    // Extract expense ID from URL query parameter
+    // Authenticate user
+    const user = await authenticateUser(req)
+    
+    // Get expense ID from URL
     const url = new URL(req.url)
-    const expenseId = url.searchParams.get('id')
-
-    // Validate expense ID
-    if (!expenseId || isNaN(parseInt(expenseId))) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid expense ID. Must be provided as ?id=number parameter.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+    const pathParts = url.pathname.split('/')
+    const expenseId = pathParts[pathParts.length - 1]
+    
+    if (!expenseId) {
+      return validationError('Expense ID is required')
     }
 
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Create authenticated client
+    const authHeader = req.headers.get('Authorization')!
+    const supabase = createAuthenticatedClient(authHeader)
 
-    // Check if expense exists and get details for audit trail
-    const { data: existingExpense, error: checkError } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('id', parseInt(expenseId))
-      .single()
-
-    if (checkError || !existingExpense) {
-      return new Response(
-        JSON.stringify({ error: `Expense with ID ${expenseId} not found.` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      )
-    }
-
-    // Store expense details for response (before deletion)
-    const deletedExpenseDetails = {
-      id: existingExpense.id,
-      amount: parseFloat(existingExpense.amount),
-      category: existingExpense.category,
-      vendor: existingExpense.vendor,
-      description: existingExpense.description,
-      status: existingExpense.status,
-      created_at: existingExpense.created_at
-    }
-
-    // Perform deletion
-    const { error: deleteError } = await supabase
+    // Delete expense (RLS ensures user can only delete their own)
+    const { error } = await supabase
       .from('expenses')
       .delete()
-      .eq('id', parseInt(expenseId))
+      .eq('id', expenseId)
+      .eq('user_id', user.id)
 
-    if (deleteError) {
-      console.error('Database deletion error:', deleteError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete expense. Please try again.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return errorResponse(new Error('Expense not found'), 'expenses-delete')
+      }
+      throw new Error(`Database error: ${error.message}`)
     }
 
-    // Verify deletion was successful
-    const { data: verifyDeleted, error: verifyError } = await supabase
-      .from('expenses')
-      .select('id')
-      .eq('id', parseInt(expenseId))
-      .single()
-
-    if (!verifyError && verifyDeleted) {
-      // If expense still exists, deletion failed
-      return new Response(
-        JSON.stringify({ error: 'Deletion verification failed. Expense may still exist.' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
-    }
-
-    // Return success response with deleted expense details
-    const response = {
-      message: 'Expense deleted successfully.',
-      deletedExpense: deletedExpenseDetails,
-      deletedAt: new Date().toISOString()
-    }
-
-    return new Response(
-      JSON.stringify(response),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
-    )
+    return successResponse({
+      message: 'Expense deleted successfully',
+      id: expenseId
+    })
 
   } catch (error) {
-    console.error('Unexpected error in expenses-delete:', error)
-    return new Response(
-      JSON.stringify({ error: 'Internal server error. Please try again later.' }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      },
-    )
+    return errorResponse(error, 'expenses-delete')
   }
 })

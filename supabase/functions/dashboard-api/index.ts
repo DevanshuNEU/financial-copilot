@@ -7,50 +7,93 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get expenses data
-    const { data: expenses, error: expensesError } = await supabase
+    // Get auth
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No auth' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user } } = await supabase.auth.getUser(token)
+    
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    // ✅ Get onboarding data for user's budget and fixed costs
+    const { data: onboardingData } = await supabase
+      .from('onboarding_data')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    console.log('Onboarding data for user:', onboardingData)
+
+    // Get expenses
+    const { data: expenses } = await supabase
       .from('expenses')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (expensesError) {
-      throw expensesError
-    }
-
-    // Get budget data
-    const { data: budgets, error: budgetsError } = await supabase
+    // Get category budgets (optional - for advanced budget tracking)
+    const { data: budgets } = await supabase
       .from('budgets')
       .select('*')
+      .eq('user_id', user.id)
 
-    if (budgetsError && budgetsError.code !== 'PGRST116') {
-      throw budgetsError
-    }
+    // 💰 CALCULATE FINANCIAL METRICS WITH FIXED COSTS
+    
+    // Total spent
+    const totalSpent = (expenses || []).reduce((sum: number, e: any) => 
+      sum + parseFloat(e.amount), 0)
 
-    // Calculate financial metrics
-    const totalSpent = expenses.reduce((sum: number, expense: any) => 
-      sum + parseFloat(expense.amount), 0)
+    // Monthly budget from onboarding
+    const monthlyBudget = onboardingData?.monthly_budget || 5000
+
+    // ✅ Calculate total fixed costs
+    const fixedCosts = onboardingData?.fixed_costs || []
+    const totalFixedCosts = fixedCosts.reduce((sum: number, cost: any) => 
+      sum + parseFloat(cost.amount || 0), 0)
+
+    console.log('Budget:', monthlyBudget, 'Fixed costs:', totalFixedCosts, 'Spent:', totalSpent)
+
+    // ✅ Available for discretionary spending = Budget - Fixed Costs - Spent
+    const discretionaryBudget = monthlyBudget - totalFixedCosts
+    const availableAmount = discretionaryBudget - totalSpent
+
+    // Calculate days remaining in month
+    const now = new Date()
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const daysRemaining = Math.max(1, endOfMonth.getDate() - now.getDate() + 1)
+
+    // ✅ Daily safe amount = Available / Days Remaining
+    const dailySafeAmount = availableAmount > 0 ? availableAmount / daysRemaining : 0
 
     // Calculate spending by category
     const spendingByCategory: Record<string, number> = {}
-    expenses.forEach((expense: any) => {
+    ;(expenses || []).forEach((expense: any) => {
       const category = expense.category
       spendingByCategory[category] = (spendingByCategory[category] || 0) + parseFloat(expense.amount)
     })
 
-    // Calculate budget health
+    // Calculate budget health per category
     const budgetHealth: Record<string, any> = {}
-    let totalBudget = 0
     
     if (budgets && budgets.length > 0) {
       budgets.forEach((budget: any) => {
@@ -59,8 +102,6 @@ serve(async (req) => {
         const spent = spendingByCategory[category] || 0
         const remaining = limit - spent
         const percentage = limit > 0 ? (spent / limit) * 100 : 0
-        
-        totalBudget += limit
         
         budgetHealth[category] = {
           limit,
@@ -72,114 +113,72 @@ serve(async (req) => {
       })
     }
 
-    // Calculate available amount (budget - spent)
-    const availableAmount = totalBudget - totalSpent
-
-    // Get recent expenses (last 5)
-    const recentExpenses = expenses.slice(0, 5).map((expense: any) => ({
-      id: expense.id,
-      amount: parseFloat(expense.amount),
-      category: expense.category,
-      vendor: expense.vendor,
-      description: expense.description,
-      created_at: expense.created_at
-    }))
-
-    // Calculate spending trends (last 7 days vs previous 7 days)
-    const now = new Date()
-    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    const previous7Days = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-
-    const last7DaysSpending = expenses
-      .filter((expense: any) => new Date(expense.created_at) >= last7Days)
-      .reduce((sum: number, expense: any) => sum + parseFloat(expense.amount), 0)
-
-    const previous7DaysSpending = expenses
-      .filter((expense: any) => {
-        const date = new Date(expense.created_at)
-        return date >= previous7Days && date < last7Days
-      })
-      .reduce((sum: number, expense: any) => sum + parseFloat(expense.amount), 0)
-
-    const spendingTrend = previous7DaysSpending > 0 
-      ? ((last7DaysSpending - previous7DaysSpending) / previous7DaysSpending) * 100
-      : 0
-
     // Generate insights
     const insights = []
     
     if (availableAmount < 0) {
       insights.push({
         type: 'warning',
-        message: `You're $${Math.abs(availableAmount).toFixed(2)} over budget this month`
+        message: `You're $${Math.abs(availableAmount).toFixed(2)} over your discretionary budget this month`
       })
     } else if (availableAmount < 100) {
       insights.push({
         type: 'warning', 
-        message: `Only $${availableAmount.toFixed(2)} left in your budget`
+        message: `Only $${availableAmount.toFixed(2)} left for discretionary spending`
       })
     }
 
-    if (spendingTrend > 50) {
+    if (dailySafeAmount > 0 && dailySafeAmount < 10) {
       insights.push({
         type: 'alert',
-        message: `Your spending increased ${spendingTrend.toFixed(0)}% this week`
-      })
-    } else if (spendingTrend < -20) {
-      insights.push({
-        type: 'positive',
-        message: `Great job! Spending decreased ${Math.abs(spendingTrend).toFixed(0)}% this week`
-      })
-    }
-
-    // Top spending category
-    const topCategory = Object.entries(spendingByCategory)
-      .sort(([,a], [,b]) => b - a)[0]
-    
-    if (topCategory) {
-      insights.push({
-        type: 'info',
-        message: `Your biggest expense category is ${topCategory[0]} ($${topCategory[1].toFixed(2)})`
+        message: `You can only spend $${dailySafeAmount.toFixed(2)} per day for the rest of the month`
       })
     }
 
     // Build comprehensive dashboard response
-    const dashboardData = {
+    const dashboardResponse = {
       summary: {
         totalSpent: parseFloat(totalSpent.toFixed(2)),
-        totalBudget: parseFloat(totalBudget.toFixed(2)),
+        totalBudget: parseFloat(monthlyBudget.toFixed(2)),
+        totalFixedCosts: parseFloat(totalFixedCosts.toFixed(2)),
+        discretionaryBudget: parseFloat(discretionaryBudget.toFixed(2)),
         availableAmount: parseFloat(availableAmount.toFixed(2)),
-        spendingTrend: parseFloat(spendingTrend.toFixed(1))
+        dailySafeAmount: parseFloat(dailySafeAmount.toFixed(2)),
+        daysRemaining,
+        spendingTrend: 0
       },
       spendingByCategory,
       budgetHealth,
-      recentExpenses,
+      recentExpenses: (expenses || []).slice(0, 5).map((e: any) => ({
+        id: e.id,
+        amount: parseFloat(e.amount),
+        category: e.category,
+        vendor: e.vendor,
+        description: e.description,
+        created_at: e.created_at
+      })),
       insights,
       stats: {
-        totalTransactions: expenses.length,
-        averageTransaction: expenses.length > 0 ? parseFloat((totalSpent / expenses.length).toFixed(2)) : 0,
-        last7DaysSpending: parseFloat(last7DaysSpending.toFixed(2)),
-        previous7DaysSpending: parseFloat(previous7DaysSpending.toFixed(2))
+        totalTransactions: (expenses || []).length,
+        averageTransaction: (expenses || []).length > 0 ? parseFloat((totalSpent / (expenses || []).length).toFixed(2)) : 0
       },
       timestamp: new Date().toISOString()
     }
 
-    return new Response(
-      JSON.stringify(dashboardData),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
-    )
+    console.log('Sending dashboard response:', dashboardResponse)
+
+    return new Response(JSON.stringify(dashboardResponse), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
 
   } catch (error) {
-    console.error('Error in dashboard-api:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      },
-    )
+    console.error('Dashboard error:', error)
+    return new Response(JSON.stringify({ 
+      error: error.message || 'Internal error',
+      details: error.toString()
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 })

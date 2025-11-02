@@ -1,245 +1,168 @@
 /**
- * EXPENSESINK Validation Module
- * =============================
- * Comprehensive validation for all Edge Functions
+ * Input Validation for EXPENSESINK Edge Functions
+ * Simple validation without external dependencies
  */
 
-import { 
-  ExpenseCategory, 
-  ExpenseStatus, 
-  ValidationResult, 
-  ValidationError 
-} from './types.ts'
-
-/**
- * Expense validation rules
- */
-export const ExpenseValidation = {
-  amount: {
-    min: 0.01,
-    max: 1000000,
-  },
-  vendor: {
-    minLength: 1,
-    maxLength: 100,
-  },
-  description: {
-    minLength: 1,
-    maxLength: 500,
-  },
-  notes: {
-    maxLength: 1000,
-  },
+export class ValidationError extends Error {
+  constructor(message: string, public field?: string) {
+    super(message)
+    this.name = 'ValidationError'
+  }
 }
 
 /**
- * Validate expense data
+ * Validate expense creation input
  */
-export function validateExpense(data: any): ValidationResult {
-  const errors: ValidationError[] = []
-  
-  // Validate amount
-  if (!data.amount) {
-    errors.push({
-      field: 'amount',
-      message: 'Amount is required',
-      code: 'REQUIRED',
-    })
-  } else if (typeof data.amount !== 'number' || isNaN(data.amount)) {
-    errors.push({
-      field: 'amount',
-      message: 'Amount must be a number',
-      code: 'INVALID_TYPE',
-    })
-  } else if (data.amount < ExpenseValidation.amount.min) {
-    errors.push({
-      field: 'amount',
-      message: `Amount must be at least ${ExpenseValidation.amount.min}`,
-      code: 'MIN_VALUE',
-    })
-  } else if (data.amount > ExpenseValidation.amount.max) {
-    errors.push({
-      field: 'amount',
-      message: `Amount cannot exceed ${ExpenseValidation.amount.max}`,
-      code: 'MAX_VALUE',
-    })
+export function validateExpenseInput(data: any) {
+  const errors: string[] = []
+
+  if (!data.amount || typeof data.amount !== 'number') {
+    errors.push('amount must be a positive number')
+  } else if (data.amount <= 0) {
+    errors.push('amount must be greater than 0')
   }
-  
-  // Validate category
-  if (!data.category) {
-    errors.push({
-      field: 'category',
-      message: 'Category is required',
-      code: 'REQUIRED',
-    })
-  } else if (!Object.values(ExpenseCategory).includes(data.category)) {
-    errors.push({
-      field: 'category',
-      message: 'Invalid category',
-      code: 'INVALID_ENUM',
-    })
+
+  if (!data.category || typeof data.category !== 'string') {
+    errors.push('category is required')
   }
-  
-  // Validate vendor
-  if (!data.vendor) {
-    errors.push({
-      field: 'vendor',
-      message: 'Vendor is required',
-      code: 'REQUIRED',
-    })
-  } else if (typeof data.vendor !== 'string') {
-    errors.push({
-      field: 'vendor',
-      message: 'Vendor must be a string',
-      code: 'INVALID_TYPE',
-    })
-  } else if (data.vendor.length < ExpenseValidation.vendor.minLength) {
-    errors.push({
-      field: 'vendor',
-      message: 'Vendor name is too short',
-      code: 'MIN_LENGTH',
-    })
-  } else if (data.vendor.length > ExpenseValidation.vendor.maxLength) {
-    errors.push({
-      field: 'vendor',
-      message: `Vendor name cannot exceed ${ExpenseValidation.vendor.maxLength} characters`,
-      code: 'MAX_LENGTH',
-    })
+
+  if (!data.vendor || typeof data.vendor !== 'string') {
+    errors.push('vendor is required')
   }
-  
-  // Validate description
-  if (!data.description) {
-    errors.push({
-      field: 'description',
-      message: 'Description is required',
-      code: 'REQUIRED',
-    })
-  } else if (typeof data.description !== 'string') {
-    errors.push({
-      field: 'description',
-      message: 'Description must be a string',
-      code: 'INVALID_TYPE',
-    })
-  } else if (data.description.length < ExpenseValidation.description.minLength) {
-    errors.push({
-      field: 'description',
-      message: 'Description is too short',
-      code: 'MIN_LENGTH',
-    })
-  } else if (data.description.length > ExpenseValidation.description.maxLength) {
-    errors.push({
-      field: 'description',
-      message: `Description cannot exceed ${ExpenseValidation.description.maxLength} characters`,
-      code: 'MAX_LENGTH',
-    })
+
+  if (data.status && !['pending', 'completed', 'cancelled'].includes(data.status)) {
+    errors.push('status must be one of: pending, completed, cancelled')
   }
-  
-  // Validate status (optional)
-  if (data.status && !Object.values(ExpenseStatus).includes(data.status)) {
-    errors.push({
-      field: 'status',
-      message: 'Invalid status',
-      code: 'INVALID_ENUM',
-    })
+
+  if (errors.length > 0) {
+    throw new ValidationError(errors.join(', '))
   }
-  
-  // Validate notes (optional)
-  if (data.notes && typeof data.notes === 'string' && 
-      data.notes.length > ExpenseValidation.notes.maxLength) {
-    errors.push({
-      field: 'notes',
-      message: `Notes cannot exceed ${ExpenseValidation.notes.maxLength} characters`,
-      code: 'MAX_LENGTH',
-    })
-  }
-  
+
   return {
-    is_valid: errors.length === 0,
-    errors,
+    amount: parseFloat(data.amount),
+    category: data.category.trim(),
+    vendor: data.vendor.trim(),
+    description: data.description ? String(data.description).trim() : '',
+    status: data.status || 'pending',
+    expense_date: data.expense_date || new Date().toISOString().split('T')[0]
   }
 }
 
 /**
- * Validate budget data
+ * Validate expense update input
  */
-export function validateBudget(data: any): ValidationResult {
-  const errors: ValidationError[] = []
-  
-  // Validate category
-  if (!data.category) {
-    errors.push({
-      field: 'category',
-      message: 'Category is required',
-      code: 'REQUIRED',
-    })
-  } else if (!Object.values(ExpenseCategory).includes(data.category)) {
-    errors.push({
-      field: 'category',
-      message: 'Invalid category',
-      code: 'INVALID_ENUM',
-    })
-  }
-  
-  // Validate monthly_limit
-  if (!data.monthly_limit) {
-    errors.push({
-      field: 'monthly_limit',
-      message: 'Monthly limit is required',
-      code: 'REQUIRED',
-    })
-  } else if (typeof data.monthly_limit !== 'number' || data.monthly_limit <= 0) {
-    errors.push({
-      field: 'monthly_limit',
-      message: 'Monthly limit must be a positive number',
-      code: 'INVALID_VALUE',
-    })
-  }
-  
-  // Validate alert_threshold
-  if (data.alert_threshold !== undefined) {
-    if (typeof data.alert_threshold !== 'number') {
-      errors.push({
-        field: 'alert_threshold',
-        message: 'Alert threshold must be a number',
-        code: 'INVALID_TYPE',
-      })
-    } else if (data.alert_threshold < 0 || data.alert_threshold > 100) {
-      errors.push({
-        field: 'alert_threshold',
-        message: 'Alert threshold must be between 0 and 100',
-        code: 'INVALID_RANGE',
-      })
+export function validateExpenseUpdate(data: any) {
+  const errors: string[] = []
+  const updates: any = {}
+
+  if (data.amount !== undefined) {
+    if (typeof data.amount !== 'number' || data.amount <= 0) {
+      errors.push('amount must be a positive number')
+    } else {
+      updates.amount = parseFloat(data.amount)
     }
   }
-  
+
+  if (data.category !== undefined) {
+    if (typeof data.category !== 'string' || data.category.trim() === '') {
+      errors.push('category cannot be empty')
+    } else {
+      updates.category = data.category.trim()
+    }
+  }
+
+  if (data.vendor !== undefined) {
+    if (typeof data.vendor !== 'string' || data.vendor.trim() === '') {
+      errors.push('vendor cannot be empty')
+    } else {
+      updates.vendor = data.vendor.trim()
+    }
+  }
+
+  if (data.description !== undefined) {
+    updates.description = data.description ? String(data.description).trim() : ''
+  }
+
+  if (data.status !== undefined) {
+    if (!['pending', 'completed', 'cancelled'].includes(data.status)) {
+      errors.push('status must be one of: pending, completed, cancelled')
+    } else {
+      updates.status = data.status
+    }
+  }
+
+  if (data.expense_date !== undefined) {
+    updates.expense_date = data.expense_date
+  }
+
+  if (errors.length > 0) {
+    throw new ValidationError(errors.join(', '))
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new ValidationError('No valid fields to update')
+  }
+
+  return updates
+}
+
+/**
+ * Validate budget input
+ */
+export function validateBudgetInput(data: any) {
+  const errors: string[] = []
+
+  if (!data.category || typeof data.category !== 'string') {
+    errors.push('category is required')
+  }
+
+  if (!data.monthly_limit || typeof data.monthly_limit !== 'number') {
+    errors.push('monthly_limit must be a positive number')
+  } else if (data.monthly_limit <= 0) {
+    errors.push('monthly_limit must be greater than 0')
+  }
+
+  if (data.alert_threshold !== undefined) {
+    if (typeof data.alert_threshold !== 'number' || data.alert_threshold < 0 || data.alert_threshold > 100) {
+      errors.push('alert_threshold must be between 0 and 100')
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new ValidationError(errors.join(', '))
+  }
+
   return {
-    is_valid: errors.length === 0,
-    errors,
+    category: data.category.trim(),
+    monthly_limit: parseFloat(data.monthly_limit),
+    alert_threshold: data.alert_threshold !== undefined ? parseFloat(data.alert_threshold) : 80.00,
+    is_active: data.is_active !== undefined ? Boolean(data.is_active) : true
   }
 }
 
 /**
- * Sanitize string input
+ * Validate onboarding input
  */
-export function sanitizeString(input: string): string {
-  return input
-    .trim()
-    .replace(/[<>]/g, '') // Remove potential HTML tags
-    .slice(0, 1000) // Limit length
-}
+export function validateOnboardingInput(data: any) {
+  const errors: string[] = []
 
-/**
- * Validate UUID
- */
-export function isValidUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  return uuidRegex.test(uuid)
-}
+  if (!data.monthly_budget || typeof data.monthly_budget !== 'number') {
+    errors.push('monthly_budget must be a positive number')
+  } else if (data.monthly_budget <= 0) {
+    errors.push('monthly_budget must be greater than 0')
+  }
 
-/**
- * Validate date string
- */
-export function isValidDate(dateString: string): boolean {
-  const date = new Date(dateString)
-  return date instanceof Date && !isNaN(date.getTime())
+  if (errors.length > 0) {
+    throw new ValidationError(errors.join(', '))
+  }
+
+  return {
+    monthly_budget: parseFloat(data.monthly_budget),
+    currency: data.currency || 'USD',
+    has_meal_plan: Boolean(data.has_meal_plan),
+    fixed_costs: Array.isArray(data.fixed_costs) ? data.fixed_costs : [],
+    spending_categories: data.spending_categories || {},
+    is_complete: true,
+    completed_at: new Date().toISOString()
+  }
 }

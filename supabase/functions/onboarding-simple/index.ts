@@ -6,128 +6,117 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Default onboarding data
-const defaultOnboarding = {
-  monthlyIncome: 2000,
-  fixedCosts: [{ name: "Rent/Dorm", amount: 600 }],
-  spendingCategories: {
-    food: 300,
-    transportation: 100,
-    entertainment: 150,
-    shopping: 100,
-    education: 50,
-    healthcare: 50,
-    other: 50
-  },
-  savingsGoal: 200,
-  budgetingStyle: "balanced"
-}
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     if (req.method === 'GET') {
-      // Get onboarding data from budgets table
-      const { data: budgets, error } = await supabase
-        .from('budgets')
+      // Get onboarding status
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'No auth' }), { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        })
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user } } = await supabase.auth.getUser(token)
+      
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        })
+      }
+
+      const { data } = await supabase
+        .from('onboarding_data')
         .select('*')
+        .eq('user_id', user.id)
+        .single()
 
-      if (error && error.code !== 'PGRST116') {
-        throw error
-      }
-
-      // If no budgets exist, return default onboarding data
-      if (!budgets || budgets.length === 0) {
-        return new Response(
-          JSON.stringify(defaultOnboarding),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-          },
-        )
-      }
-
-      // Convert budgets to onboarding format
-      const spendingCategories: Record<string, number> = {}
-      budgets.forEach((budget: any) => {
-        spendingCategories[budget.category] = budget.monthly_limit
+      return new Response(JSON.stringify({
+        onboarding: data || null,
+        is_complete: data?.is_complete || false
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
-
-      const onboardingData = {
-        ...defaultOnboarding,
-        spendingCategories
-      }
-
-      return new Response(
-        JSON.stringify(onboardingData),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        },
-      )
-
-    } else if (req.method === 'POST') {
-      // Save onboarding data to budgets table
-      const body = await req.json()
-      const { spendingCategories } = body
-
-      if (!spendingCategories) {
-        return new Response(
-          JSON.stringify({ error: 'Missing spendingCategories in request body' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        )
-      }
-
-      // Delete existing budgets
-      await supabase.from('budgets').delete().neq('id', 0)
-
-      // Insert new budgets
-      const budgetInserts = Object.entries(spendingCategories).map(([category, limit]) => ({
-        category,
-        monthly_limit: Number(limit),
-        created_at: new Date().toISOString()
-      }))
-
-      const { error: insertError } = await supabase
-        .from('budgets')
-        .insert(budgetInserts)
-
-      if (insertError) {
-        throw insertError
-      }
-
-      return new Response(
-        JSON.stringify({ success: true, message: 'Onboarding data saved successfully' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        },
-      )
-
-    } else {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 405 }
-      )
     }
 
+    if (req.method === 'POST') {
+      // Save onboarding
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'No auth' }), { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        })
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user } } = await supabase.auth.getUser(token)
+      
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        })
+      }
+
+      const body = await req.json()
+
+      const { data, error } = await supabase
+        .from('onboarding_data')
+        .upsert({
+          user_id: user.id,
+          monthly_budget: body.monthly_budget || 5000,
+          currency: body.currency || 'USD',
+          has_meal_plan: body.has_meal_plan || false,
+          fixed_costs: body.fixed_costs || [],
+          spending_categories: body.spending_categories || {},
+          is_complete: true,
+          completed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Onboarding error:', error)
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({
+        onboarding: data,
+        message: 'Success'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+
   } catch (error) {
-    console.error('Error in onboarding-simple:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      },
-    )
+    console.error('Function error:', error)
+    return new Response(JSON.stringify({ 
+      error: error.message || 'Internal error' 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 })
