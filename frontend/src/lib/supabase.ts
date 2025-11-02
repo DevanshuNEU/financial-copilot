@@ -1,8 +1,15 @@
 // Supabase client configuration for EXPENSESINK
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://xitnatzzojgzmtpagxpe.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpdG5hdHp6b2pnem10cGFneHBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0MjU5NjUsImV4cCI6MjA2NzAwMTk2NX0.jVVRwpOv3K734lYFgitCQYEReY__EaGo1A5MMVJA9v8'
+// Get credentials from environment variables
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || ''
+
+// Validate environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase environment variables!')
+  console.error('Please check your .env file has REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY')
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
