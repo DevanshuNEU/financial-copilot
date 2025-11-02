@@ -199,7 +199,7 @@ const Dashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-600">
-                ${dashboardData?.overview.total_expenses.toFixed(2)}
+                ${dashboardData?.summary.totalSpent.toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -210,7 +210,7 @@ const Dashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-600">
-                {dashboardData?.overview.total_transactions}
+                {dashboardData?.stats.totalTransactions}
               </div>
             </CardContent>
           </Card>
@@ -219,16 +219,15 @@ const Dashboard: React.FC = () => {
         {/* Interactive Category Breakdown */}
         {dashboardData && safeToSpendData && (
           <SpendingDonutChart
-            data={dashboardData.category_breakdown.map((cat) => ({
-              ...cat,
-              budget:
-                safeToSpendData.budget_status.find(
-                  (b) => b.category === cat.category
-                )?.limit || 0,
-              lastWeekTotal: 0, // TODO: Add last week data from backend
+            data={Object.entries(dashboardData.spendingByCategory || {}).map(([category, total]) => ({
+              category,
+              total,
+              count: 1,
+              budget: dashboardData.budgetHealth[category]?.limit || 0,
+              lastWeekTotal: 0,
             }))}
-            totalSpent={dashboardData.overview.total_expenses}
-            totalBudget={safeToSpendData.safe_to_spend.total_budget}
+            totalSpent={dashboardData.summary.totalSpent}
+            totalBudget={dashboardData.summary.totalBudget}
           />
         )}
         {/* Recent Expenses */}

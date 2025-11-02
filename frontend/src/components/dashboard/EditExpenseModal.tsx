@@ -25,20 +25,12 @@ interface EditExpenseModalProps {
   onExpenseUpdated: () => void;
 }
 
-const EXPENSE_CATEGORIES = [
-  { value: 'meals', label: '🍽️ Meals' },
-  { value: 'travel', label: '✈️ Travel' },
-  { value: 'office', label: '📚 Office/Books' },
-  { value: 'software', label: '💻 Software' },
-  { value: 'utilities', label: '🔌 Utilities' },
-  { value: 'marketing', label: '🎯 Entertainment' },
-  { value: 'other', label: '📦 Other' },
-];
+// ✅ REMOVED OLD CATEGORIES - They were causing duplicates!
 
 const EXPENSE_STATUS = [
   { value: 'pending', label: '⏳ Pending' },
-  { value: 'approved', label: '✅ Approved' },
-  { value: 'rejected', label: '❌ Rejected' },
+  { value: 'completed', label: '✅ Completed' },
+  { value: 'cancelled', label: '❌ Cancelled' },
 ];
 
 export const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
@@ -145,11 +137,13 @@ export const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXPENSE_CATEGORIES.map((category) => (
-                    <SelectItem key={category.value} value={category.value}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="food">Food & Dining</SelectItem>
+                  <SelectItem value="transportation">Transportation</SelectItem>
+                  <SelectItem value="entertainment">Entertainment</SelectItem>
+                  <SelectItem value="textbooks">Textbooks & Supplies</SelectItem>
+                  <SelectItem value="healthcare">Healthcare</SelectItem>
+                  <SelectItem value="shopping">Shopping</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>

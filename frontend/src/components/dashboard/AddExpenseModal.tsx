@@ -21,6 +21,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAppData } from '../../contexts/AppDataContext';
+import { CATEGORY_OPTIONS } from '../../config/categories';  // ✅ Use centralized categories
 
 interface AddExpenseModalProps {
   onExpenseAdded: () => void;
@@ -41,15 +42,8 @@ interface FormErrors {
   description?: string;
 }
 
-const CATEGORIES = [
-  { value: 'meals', label: 'Meals' },
-  { value: 'travel', label: 'Travel' },
-  { value: 'office', label: 'Office' },
-  { value: 'software', label: 'Software' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'utilities', label: 'Utilities' },
-  { value: 'other', label: 'Other' },
-];
+// ✅ Use centralized categories imported above
+// const CATEGORIES = [...] - REMOVED, using CATEGORY_OPTIONS instead
 
 const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ 
   onExpenseAdded, 
@@ -207,11 +201,13 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    {category.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="food">Food & Dining</SelectItem>
+                <SelectItem value="transportation">Transportation</SelectItem>
+                <SelectItem value="entertainment">Entertainment</SelectItem>
+                <SelectItem value="textbooks">Textbooks & Supplies</SelectItem>
+                <SelectItem value="healthcare">Healthcare</SelectItem>
+                <SelectItem value="shopping">Shopping</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
             {errors.category && (
