@@ -11,7 +11,16 @@ export class ApiFinancialService implements IFinancialService {
     console.log('🚀 Hybrid API: Starting saveOnboardingData with:', data)
     
     try {
-      await apiService.saveOnboardingData(data)
+      // Convert OnboardingData to API format
+      const apiData = {
+        monthly_budget: data.monthlyBudget,
+        currency: data.currency,
+        has_meal_plan: data.hasMealPlan,
+        fixed_costs: data.fixedCosts,
+        spending_categories: data.spendingCategories
+      }
+      
+      await apiService.saveOnboarding(apiData)
       console.log('✅ Hybrid API: Onboarding data saved to Supabase via Edge Functions')
     } catch (error) {
       console.error('❌ Hybrid API: Save error:', error)
@@ -26,15 +35,26 @@ export class ApiFinancialService implements IFinancialService {
     console.log('📖 Hybrid API: Loading onboarding data via Edge Functions')
     
     try {
-      const data = await apiService.getOnboardingData()
+      const response = await apiService.getOnboarding() as any
       
-      if (!data) {
+      if (!response || !response.onboarding) {
         console.log('📭 Hybrid API: No onboarding data found')
         return null
       }
 
-      console.log('✅ Hybrid API: Onboarding data loaded:', data)
-      return data
+      const data = response.onboarding
+      
+      // Map API response to OnboardingData type
+      const onboardingData: OnboardingData = {
+        monthlyBudget: data.monthly_budget || 0,
+        currency: data.currency || 'USD',
+        hasMealPlan: data.has_meal_plan || false,
+        fixedCosts: data.fixed_costs || [],
+        spendingCategories: data.spending_categories || {}
+      }
+
+      console.log('✅ Hybrid API: Onboarding data loaded:', onboardingData)
+      return onboardingData
     } catch (error) {
       console.error('❌ Hybrid API: Load error:', error)
       return null
@@ -266,14 +286,17 @@ export class ApiFinancialService implements IFinancialService {
    * Create or update budget via Flask API
    */
   async createOrUpdateBudget(category: string, monthlyLimit: number): Promise<any> {
-    console.log('💰 Flask API: Creating/updating budget:', category, monthlyLimit)
+    console.log('💰 Hybrid API: Creating/updating budget:', category, monthlyLimit)
     
     try {
-      const budget = await apiService.createOrUpdateBudget(category, monthlyLimit)
-      console.log('✅ Flask API: Budget saved:', budget)
+      const budget = await apiService.createBudget({ 
+        category, 
+        monthly_limit: monthlyLimit 
+      })
+      console.log('✅ Hybrid API: Budget saved:', budget)
       return budget
     } catch (error) {
-      console.error('❌ Flask API: Budget save error:', error)
+      console.error('❌ Hybrid API: Budget save error:', error)
       throw error
     }
   }

@@ -1,60 +1,35 @@
-import { Expense, DashboardData, ExpensesResponse, Budget, SafeToSpendResponse } from '../types';
+import { Expense, DashboardData, ExpensesResponse, Budget, SafeToSpendResponse, WeeklyComparisonData } from '../types';
+import { supabase } from '../lib/supabase';
 
-// API Configuration
-const FLASK_API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002';
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const USE_EDGE_FUNCTIONS = process.env.REACT_APP_USE_EDGE_FUNCTIONS === 'true';
-
-// Edge Functions URLs
 const EDGE_FUNCTIONS_BASE_URL = `${SUPABASE_URL}/functions/v1`;
 
 class HybridApiService {
-  /**
-   * Generic fetch method for Flask API
-   */
-  private async fetchFlaskApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${FLASK_API_BASE_URL}${endpoint}`;
-    
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-        ...options,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Flask API error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`Flask API call failed for ${endpoint}:`, error);
-      throw error;
+  private async getAuthToken(): Promise<string> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No active session');
     }
+    return session.access_token;
   }
 
-  /**
-   * Generic fetch method for Edge Functions
-   */
   private async fetchEdgeFunction<T>(functionName: string, options?: RequestInit): Promise<T> {
     const url = `${EDGE_FUNCTIONS_BASE_URL}/${functionName}`;
-    
     try {
+      const token = await this.getAuthToken();
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           ...options?.headers,
         },
         ...options,
       });
-
       if (!response.ok) {
-        throw new Error(`Edge Function error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Edge Function error! status: ${response.status}`);
       }
-
       return await response.json();
     } catch (error) {
       console.error(`Edge Function call failed for ${functionName}:`, error);
@@ -62,195 +37,89 @@ class HybridApiService {
     }
   }
 
-  /**
-   * Determine if an endpoint should use Edge Functions
-   */
-  private isSimpleEndpoint(endpoint: string): boolean {
-    if (!USE_EDGE_FUNCTIONS) return false;
-    
-    const simplePatterns = [
-      /^\/api\/expenses\/\d+$/,    // GET single expense or PUT/DELETE expense by ID
-      /^\/api\/expenses\/?$/,      // GET list or POST create  
-      /^\/api\/health$/,           // Health check
-      /^\/api\/onboarding$/,       // GET/POST onboarding data
-      /^\/api\/dashboard$/,        // GET comprehensive dashboard data
-      /^\/api\/analytics$/,        // GET analytics data
-      /^\/api\/budgets\/?$/,       // GET/POST/DELETE budgets
-      /^\/api\/safe-to-spend$/,    // GET safe-to-spend calculations
-      /^\/api\/dashboard\/weekly-comparison$/, // GET weekly comparison
-    ];
-    
-    return simplePatterns.some(pattern => pattern.test(endpoint));
+  private shouldUseEdgeFunctions(): boolean {
+    return USE_EDGE_FUNCTIONS;
   }
 
-  /**
-   * Route request to appropriate backend
-   */
-  private async routeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    // For simple CRUD operations, use Edge Functions if enabled
-    if (this.isSimpleEndpoint(endpoint)) {
-      console.log(`🚀 Routing to Edge Function: ${endpoint}`);
-      
-      // Map Flask endpoints to Edge Function names
-      if (endpoint === '/api/health') {
-        return this.fetchEdgeFunction('health-check', options);
-      }
-      
-      if (endpoint === '/api/expenses' || endpoint === '/api/expenses/') {
-        if (options?.method === 'POST') {
-          return this.fetchEdgeFunction('expenses-create', options);
-        } else {
-          return this.fetchEdgeFunction('expenses-list', options);
-        }
-      }
-      
-      if (endpoint === '/api/onboarding') {
-        if (options?.method === 'POST') {
-          return this.fetchEdgeFunction('onboarding-save', options);
-        } else {
-          return this.fetchEdgeFunction('onboarding-simple', options);
-        }
-      }
-      
-      if (endpoint === '/api/dashboard') {
-        return this.fetchEdgeFunction('dashboard-api', options);
-      }
-      
-      if (endpoint === '/api/analytics') {
-        return this.fetchEdgeFunction('analytics-api', options);
-      }
-      
-      if (endpoint === '/api/budgets' || endpoint === '/api/budgets/') {
-        return this.fetchEdgeFunction('budget-api', options);
-      }
-      
-      if (endpoint === '/api/safe-to-spend') {
-        return this.fetchEdgeFunction('safe-to-spend-api', options);
-      }
-      
-      // Single expense operations - GET, PUT, DELETE by ID
-      const singleExpenseMatch = endpoint.match(/^\/api\/expenses\/(\d+)$/);
-      if (singleExpenseMatch) {
-        const expenseId = singleExpenseMatch[1];
-        if (!options?.method || options.method === 'GET') {
-          return this.fetchEdgeFunction(`expenses-get?id=${expenseId}`, options);
-        } else if (options.method === 'PUT') {
-          return this.fetchEdgeFunction(`expenses-update?id=${expenseId}`, options);
-        } else if (options.method === 'DELETE') {
-          return this.fetchEdgeFunction(`expenses-delete?id=${expenseId}`, options);
-        }
-      }
-      
-      // Weekly comparison endpoint
-      if (endpoint === '/api/dashboard/weekly-comparison') {
-        return this.fetchEdgeFunction('weekly-comparison', options);
-      }
-    }
-    
-    // For complex operations, use Flask API
-    console.log(`🏗️ Routing to Flask API: ${endpoint}`);
-    return this.fetchFlaskApi(endpoint, options);
+  async getHealth() {
+    return this.fetchEdgeFunction('health-check');
   }
 
-  // Health check - routed to Edge Functions if enabled
-  async healthCheck(): Promise<{ status: string; message: string; version: string }> {
-    return this.routeRequest('/api/health');
+  async getDashboardData(): Promise<DashboardData> {
+    return this.fetchEdgeFunction('dashboard-api');
   }
 
-  // Get all expenses - routed to Edge Functions if enabled
-  async getExpenses(): Promise<ExpensesResponse> {
-    return this.routeRequest('/api/expenses');
+  async getExpenses(filters?: any): Promise<ExpensesResponse> {
+    return this.fetchEdgeFunction('expenses-list');
   }
 
-  // Create new expense - routed to Edge Functions if enabled
-  async createExpense(expense: Omit<Expense, 'id' | 'created_at'>): Promise<Expense> {
-    return this.routeRequest('/api/expenses', {
+  async createExpense(expense: Partial<Expense>): Promise<Expense> {
+    return this.fetchEdgeFunction('expenses-create', {
       method: 'POST',
       body: JSON.stringify(expense),
     });
   }
 
-  // ONBOARDING DATA - routed to Edge Functions if enabled
-  async getOnboardingData(): Promise<any> {
-    return this.routeRequest('/api/onboarding');
+  async updateExpense(id: string | number, updates: Partial<Expense>): Promise<Expense> {
+    return this.fetchEdgeFunction('expenses-update', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
   }
 
-  async saveOnboardingData(data: any): Promise<any> {
-    return this.routeRequest('/api/onboarding', {
+  async deleteExpense(id: string | number): Promise<void> {
+    return this.fetchEdgeFunction('expenses-delete', {
+      method: 'DELETE',
+    });
+  }
+
+  async getOnboarding() {
+    return this.fetchEdgeFunction('onboarding-simple');
+  }
+
+  async saveOnboarding(data: any) {
+    return this.fetchEdgeFunction('onboarding-simple', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  // Update existing expense - now routed to Edge Functions
-  async updateExpense(id: number, expense: Partial<Omit<Expense, 'id' | 'created_at'>>): Promise<Expense> {
-    return this.routeRequest<Expense>(`/api/expenses/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(expense),
-    });
+  async getBudgets(): Promise<Budget[]> {
+    return this.fetchEdgeFunction('budget-api');
   }
 
-  // Delete expense - now routed to Edge Functions
-  async deleteExpense(id: number): Promise<{ message: string }> {
-    return this.routeRequest<{ message: string }>(`/api/expenses/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // COMPREHENSIVE DASHBOARD API - All calculations server-side
-  async getDashboardData(): Promise<any> {
-    return this.routeRequest('/api/dashboard');
-  }
-
-  // Budget Management - now routed to Edge Functions
-  async getBudgets(): Promise<{ budgets: Budget[] }> {
-    const response = await this.routeRequest<{ budgets: any[] }>('/api/budgets');
-    // Transform response to match expected format
-    return {
-      budgets: response.budgets || []
-    };
-  }
-
-  async createOrUpdateBudget(category: string, monthly_limit: number): Promise<Budget> {
-    return this.routeRequest('/api/budgets', {
+  async createBudget(budget: Partial<Budget>): Promise<Budget> {
+    return this.fetchEdgeFunction('budget-api', {
       method: 'POST',
-      body: JSON.stringify({ category, monthly_limit }),
+      body: JSON.stringify(budget),
     });
   }
 
-  // Safe to Spend - now routed to Edge Functions
-  async getSafeToSpend(): Promise<SafeToSpendResponse> {
-    return this.routeRequest('/api/safe-to-spend');
+  async updateBudget(id: string | number, updates: Partial<Budget>): Promise<Budget> {
+    return this.fetchEdgeFunction('budget-api', {
+      method: 'PUT',
+      body: JSON.stringify({ id: String(id), ...updates }),
+    });
   }
 
-  // Weekly Comparison Data - now routed to Edge Functions
-  async getWeeklyComparison(): Promise<{
-    weeklyData: Array<{
-      day: string;
-      dayName: string;
-      thisWeek: number;
-      lastWeek: number;
-    }>;
-    thisWeekTotal: number;
-    lastWeekTotal: number;
-    currentDayOfWeek: number;
-  }> {
-    return this.routeRequest<{
-      weeklyData: Array<{
-        day: string;
-        dayName: string;
-        thisWeek: number;
-        lastWeek: number;
-      }>;
-      thisWeekTotal: number;
-      lastWeekTotal: number;
-      currentDayOfWeek: number;
-    }>('/api/dashboard/weekly-comparison');
+  async deleteBudget(id: string | number): Promise<void> {
+    return this.fetchEdgeFunction('budget-api', {
+      method: 'DELETE',
+      body: JSON.stringify({ id: String(id) }),
+    });
+  }
+
+  async getSafeToSpend(): Promise<SafeToSpendResponse> {
+    return this.fetchEdgeFunction('safe-to-spend-api');
+  }
+
+  async getAnalytics() {
+    return this.fetchEdgeFunction('analytics-api');
+  }
+
+  async getWeeklyComparison(): Promise<WeeklyComparisonData> {
+    return this.fetchEdgeFunction('weekly-comparison');
   }
 }
 
-const hybridApiService = new HybridApiService();
-
-// Export both the named instance and as apiService for compatibility
-export { hybridApiService };
-export const apiService = hybridApiService;
+export const apiService = new HybridApiService();
