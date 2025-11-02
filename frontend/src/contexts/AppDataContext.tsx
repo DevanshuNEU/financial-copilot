@@ -21,7 +21,7 @@ export interface UserExpense {
   category: string
   vendor?: string
   date: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled'  // ✅ All valid statuses
   createdAt: string
 }
 
@@ -183,42 +183,58 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     try {
       console.log('🚀 AppDataContext: Loading comprehensive dashboard data from Edge Functions')
       
-      // PROPER ARCHITECTURE: Single API call for all dashboard data
-      // All calculations happen server-side with proper business logic
-      const dashboardData = await apiService.getDashboardData()
+      // Load both dashboard AND onboarding data
+      const [dashboardData, onboardingResponse] = await Promise.all([
+        apiService.getDashboardData(),
+        apiService.getOnboarding()
+      ])
       
       console.log('✅ AppDataContext: Dashboard API response:', dashboardData)
+      console.log('✅ AppDataContext: Onboarding API response:', onboardingResponse)
+      
+      // Extract onboarding data
+      const onboardingDataFromApi = (onboardingResponse as any)?.onboarding
+      
+      // Map to OnboardingData type
+      const onboardingData: OnboardingData | null = onboardingDataFromApi ? {
+        monthlyBudget: onboardingDataFromApi.monthly_budget || 0,
+        currency: onboardingDataFromApi.currency || 'USD',
+        hasMealPlan: onboardingDataFromApi.has_meal_plan || false,
+        fixedCosts: onboardingDataFromApi.fixed_costs || [],
+        spendingCategories: onboardingDataFromApi.spending_categories || {}
+      } : null
+      
+      console.log('✅ Mapped onboarding data:', onboardingData)
       
       // Extract data from comprehensive API response
-      const allExpenses = dashboardData.recentActivity || []
+      const allExpenses = dashboardData.recentExpenses || []
       
       // Convert API response to proper UserExpense format
       const userExpenses: UserExpense[] = allExpenses.map((expense: any) => ({
-        id: String(expense.id), // Ensure ID is string
+        id: String(expense.id),
         amount: expense.amount,
-        description: expense.description,
+        description: expense.description || '',
         category: expense.category,
         vendor: expense.vendor || '',
-        date: expense.date ? new Date(expense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        date: expense.created_at ? new Date(expense.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         status: expense.status || 'pending',
-        createdAt: expense.date || new Date().toISOString()
+        createdAt: expense.created_at || new Date().toISOString()
       }))
       
-      const totalSpent = dashboardData.totalUserExpenses || 0
+      const totalSpent = dashboardData.summary?.totalSpent || 0
       
-      // Create proper safe-to-spend data structure from server calculations
+      // ✅ Create proper safe-to-spend data with fixed costs
       const safeToSpend: ExtendedSafeToSpendData = {
-        totalBudget: dashboardData.totalBudget,
-        totalFixedCosts: dashboardData.totalFixedCosts,
-        availableForSpending: dashboardData.availableAmount,
-        availableAmount: dashboardData.availableAmount,
-        dailySafeAmount: dashboardData.dailySafeAmount,
-        currency: dashboardData.currency,
-        daysLeftInMonth: dashboardData.daysLeftInMonth,
+        totalBudget: dashboardData.summary?.totalBudget || 0,
+        totalFixedCosts: dashboardData.summary?.totalFixedCosts || 0,
+        availableForSpending: dashboardData.summary?.discretionaryBudget || 0,
+        availableAmount: dashboardData.summary?.availableAmount || 0,
+        dailySafeAmount: dashboardData.summary?.dailySafeAmount || 0,
+        currency: onboardingData?.currency || 'USD',
+        daysLeftInMonth: dashboardData.summary?.daysRemaining || 30,
         isPersonalized: true,
-        // Missing properties required by ExtendedSafeToSpendData interface
-        totalSpent: dashboardData.totalSpent,
-        dailySpendingGuide: dashboardData.dailySafeAmount // Same as dailySafeAmount
+        totalSpent: dashboardData.summary?.totalSpent || 0,
+        dailySpendingGuide: dashboardData.summary?.dailySafeAmount || 0
       }
       
       // Create user profile from server data
@@ -229,7 +245,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
         lastName: authUser.lastName,
         studentType: 'international',
         preferences: {
-          currency: dashboardData.currency,
+          currency: 'USD',
           notifications: {
             budgetWarnings: true,
             dailySummaries: false,
@@ -244,7 +260,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
       setAppData(prev => ({
         ...prev,
         user: userProfile,
-        onboardingData: dashboardData.userProfile,
+        onboardingData: onboardingData,  // ✅ Use the loaded onboarding data!
         safeToSpendData: safeToSpend,
         expenses: userExpenses,
         budgetCategories,
@@ -317,18 +333,20 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
     }
 
     try {
-      const newExpense: UserExpense = {
-        ...expenseData,
-        id: `expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        createdAt: new Date().toISOString()
-      }
+      // ✅ SAVE TO SUPABASE VIA API
+      console.log('💾 Saving expense to Supabase:', expenseData)
+      
+      await apiService.createExpense({
+        amount: expenseData.amount,
+        category: expenseData.category,
+        vendor: expenseData.vendor,
+        description: expenseData.description,
+        status: expenseData.status || 'pending'
+      })
 
-      // Only save user expenses, not fixed costs
-      const userExpenses = appData.expenses.filter(expense => !String(expense.id).startsWith('fixed_cost_'))
-      const updatedUserExpenses = [...userExpenses, newExpense]
-      saveUserExpenses(updatedUserExpenses)
+      console.log('✅ Expense saved to Supabase!')
 
-      // Recalculate everything
+      // ✅ Refresh all data from server to get updated totals
       await refreshAppData()
       
       toast.success('Expense added successfully')
@@ -345,7 +363,7 @@ export const AppDataProvider: React.FC<AppDataProviderProps> = ({ children }) =>
       
       throw error
     }
-  }, [authUser, appData.expenses, saveUserExpenses, refreshAppData, addError, handleNetworkError])
+  }, [authUser, refreshAppData, addError, handleNetworkError])
 
   const updateExpense = useCallback(async (id: string, updates: Partial<UserExpense>): Promise<void> => {
     try {
